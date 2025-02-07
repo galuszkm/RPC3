@@ -2,7 +2,18 @@ import { useChannels } from "../context/ChannelsContext";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useRef } from "react";
 import { fixedOptions } from "./chartOptions";
+import { Channel } from "../rpc3";
 import "./Chart.css";
+
+const generateData = (c: Channel) => {
+  const len = c.value.length;
+  const data = new Float64Array(len * 2);
+  for (let i = 0; i < len; i++) {
+    data[i * 2] = i * c.dt;  // X values (time)
+    data[i * 2 + 1] = c.value[i]; // Y values (signal)
+  }
+  return data;
+};
 
 export default function Chart() {
   const { channels } = useChannels();
@@ -44,11 +55,9 @@ export default function Chart() {
       // Generate Series Data Dynamically
       const seriesData = channels.map(c => ({
         type: "line",
-        name: `${c.Name} - ${c.filename?.split('.')[0]}`,
-        data: c.value.map((v, vdx) => ({
-          value: [vdx * c.dt, v], // X (time), Y (value)
-          units: c.Units // Add extra metadata here
-        })),
+        name: `${c.Name} - ${c.filename?.split('.')[0]} [${c.Units}]`,
+        dimensions: ["x", "y"],
+        data: generateData(c),
         showSymbol: false,
         large: true,
         sampling: "lttb",

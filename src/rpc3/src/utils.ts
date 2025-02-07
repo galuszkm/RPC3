@@ -5,21 +5,17 @@ export function linspace(start: number, stop: number, n: number): number[] {
 }
 
 export function arrayMax(y: number[]): number {
-  let len = y.length;
   let max = -Infinity;
-
-  while (len--) {
-      max = y[len] > max ? y[len] : max;
+  for (let i = 0; i < y.length; i++) {
+    if (y[i] > max) max = y[i];
   }
   return max;
 }
 
 export function arrayMin(y: number[]): number {
-  let len = y.length;
   let min = Infinity;
-
-  while (len--) {
-    min = y[len] < min ? y[len] : min;
+  for (let i = 0; i < y.length; i++) {
+    if (y[i] < min) min = y[i];
   }
   return min;
 }

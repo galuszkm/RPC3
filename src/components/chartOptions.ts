@@ -26,10 +26,12 @@ const tooltipFormatter = (params: any) => {
   `;
 
   params.forEach((param: any) => {
-    // Extract custom unit (if available)
-    const unit = param.data?.units || "";
+    // Extract unit from `seriesName` using regex
+    const unitMatch = param.seriesName.match(/\[(.*?)\]$/);
+    const unit = unitMatch ? unitMatch[1] : "";
+    const sName = param.seriesName.replace(/\s*\[.*?\]$/, "");
     // Use the helper function to format each row
-    tooltipText += formatTooltipRow(param.marker, param.seriesName, param.value[1], unit);
+    tooltipText += formatTooltipRow(param.marker, sName, param.value[1], unit);
   });
 
   return `<div style="padding: 5px; min-width: 250px;">${tooltipText}</div>`;
@@ -68,11 +70,9 @@ export const fixedOptions = {
         fontFamily: "Inter var, sans-serif",
       },
       axisLabel: {
-        textStyle: {
-          fontSize: 13,
-          fontFamily: "Inter var, sans-serif",
-          color: "#555"
-        },
+        fontSize: 13,
+        fontFamily: "Inter var, sans-serif",
+        color: "#555",
       },
     },
     yAxis: {
@@ -88,11 +88,9 @@ export const fixedOptions = {
         fontFamily: "Inter var, sans-serif",
       },
       axisLabel: {
-        textStyle: {
-          fontSize: 13,
-          fontFamily: "Inter var, sans-serif",
-          color: "#555"
-        },
+        fontSize: 13,
+        fontFamily: "Inter var, sans-serif",
+        color: "#555",
         formatter: (value: number) => value.toFixed(2), // Format Y-axis labels
       },
     },
