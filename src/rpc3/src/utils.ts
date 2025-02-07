@@ -4,12 +4,24 @@ export function linspace(start: number, stop: number, n: number): number[] {
   return Array.from({ length: n }, (_, i) => start + i * step);
 }
 
-export function arrayMax(arr: number[]): number {
-  return Math.max(...arr);
+export function arrayMax(y: number[]): number {
+  let len = y.length;
+  let max = -Infinity;
+
+  while (len--) {
+      max = y[len] > max ? y[len] : max;
+  }
+  return max;
 }
 
-export function arrayMin(arr: number[]): number {
-  return Math.min(...arr);
+export function arrayMin(y: number[]): number {
+  let len = y.length;
+  let min = Infinity;
+
+  while (len--) {
+    min = y[len] < min ? y[len] : min;
+  }
+  return min;
 }
 
 export function normalizeInt16(array: number[]): [Int16Array, number] {
