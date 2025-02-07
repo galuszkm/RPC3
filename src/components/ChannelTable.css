@@ -1,0 +1,70 @@
+.channel-table {
+    margin: 1rem;
+    font-size: 14px;
+}
+
+.channel-table .p-paginator span,
+.channel-table .p-paginator button {
+    font-size: 14px;
+}
+
+.channel-table .p-paginator .p-dropdown {
+    height: 2.5rem;
+}
+.channel-table .p-paginator .p-dropdown-panel {
+    font-size: 14px;
+}
+.channel-table .p-paginator .p-dropdown-panel li {
+    padding: 10px;
+    justify-content: center;
+}
+.channel-table .p-paginator .p-dropdown-label.p-inputtext {
+    padding: 5px;
+    padding-left: 10px;
+    padding-right: 0;
+    align-items: center;
+    align-content: center;
+}
+
+.channel-table > .p-datatable-header {
+    padding: 0;
+    padding-left: 1rem;
+    padding-right: 0.5rem;
+}
+
+.channel-table-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.channel-table-header > .title {
+    flex-grow: 1;
+}
+
+.channel-table-header .filter-global {
+    font-size: 13px;
+}
+
+.channel-table tr:hover {
+    background-color: rgba(222, 246, 255, 0.5);
+}
+
+.channel-table th {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    padding-right: 5px;
+}
+
+.channel-table td {
+    padding-top: 7px;
+    padding-bottom: 7px;
+}
+
+.p-column-filter-remove-button > span,
+.p-column-filter-add-button > span {
+    margin-left: 8px;
+}
+.p-column-filter-overlay * {
+    font-size: 14px;
+}

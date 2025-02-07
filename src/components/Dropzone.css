@@ -1,0 +1,66 @@
+.dropzone-title {
+    font-weight: bold;
+    margin-left: 0.25rem;
+    margin-bottom: 0.8rem;
+}
+
+.dropzone-box {
+    padding: 0.5rem 1rem 0.5rem 1rem;
+    border: 1px solid rgb(225, 225, 225);
+    border-radius: 0.6rem;
+    height: 50vh;
+    background-color: rgba(230, 230, 230, 0.1);
+}
+
+.dropzone-box-empty {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 2rem;
+}
+
+.dropzone-box-empty > i {
+    margin-bottom: 1.5rem;
+}
+.dropzone-box-empty > span {
+    margin-bottom: 5rem;
+    text-align: center;
+}
+
+.dropzone-file-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+    padding: 0.5rem 0.25rem 0.5rem 0.25rem;
+    border-bottom: 1px solid rgb(230,230,230);
+}
+
+.dropzone-file-row .title {
+    flex-grow: 1;
+    text-align: start;
+    word-break: break-all;
+}
+
+.dropzone-file-row .title > span {
+    margin-right: 1rem;
+}
+
+.dropzone-file-row .utils {
+    min-width: 8rem;
+    display: flex;
+}
+
+.dropzone-file-row .utils > span {
+    margin-left: auto;
+    font-size: 0.75rem;
+}
+
+.dropzone-file-row .utils > button {
+    margin-left: 1rem;
+    width: 2rem;
+    height: 2rem;
+}

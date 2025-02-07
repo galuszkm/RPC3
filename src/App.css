@@ -1,0 +1,14 @@
+.App-grid {
+    display: flex;
+    flex-direction: row;
+}
+
+.App-grid-chart {
+    flex-grow: 1;
+}
+
+.App-grid-dropzone {
+    width: 25vw;
+    padding: 1rem;
+    padding-left: 2rem;
+}
