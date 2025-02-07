@@ -67,7 +67,12 @@ const ChannelTable: React.FC = () => {
   };
 
   const handleSelectionChange = (e: DataTableSelectionMultipleChangeEvent<ChannelType[]>) => {
-    const selected = e.value as ChannelType[];
+    let selected = e.value as ChannelType[];
+    // Ensure that all selected channels belong to existing files
+    // Bug occured when file was removed but its selected channel was still in e.value 
+    const validHash = files.map(f => f.hash)
+    selected = selected.filter(c => validHash.includes(String(c.channelRef.fileHash)));
+    // Set new selected channels to state and context
     setSelectedChannels(selected);
     setChannels(selected.map(i => i.channelRef));
   }

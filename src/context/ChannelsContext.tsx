@@ -14,9 +14,10 @@ type ChannelsAction =
 const channelsReducer = (state: ChannelState, action: ChannelsAction): ChannelState => {
   switch (action.type) {
     case "SET_CHANNELS":
-      return { channels: action.payload };
+      return { channels: [...action.payload] };
     case "REMOVE_CHANNELS_BY_FILEHASH":
-      return { channels: state.channels.filter(i => i.fileHash != action.payload) };
+      const updatedChannels = state.channels.filter(i => i.fileHash !== action.payload);
+      return { channels: [...updatedChannels] };
     default:
       return state;
   }
