@@ -61,6 +61,7 @@ export default function Chart() {
         showSymbol: false,
         large: true,
         sampling: "lttb",
+        silent: true,
         lineStyle: { width: 1 },
       }));
 

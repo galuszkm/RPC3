@@ -1,7 +1,14 @@
+.dropzone-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
 .dropzone-title {
+    flex-grow: 1;
     font-weight: bold;
     margin-left: 0.25rem;
-    margin-bottom: 0.8rem;
 }
 
 .dropzone-box {
@@ -12,7 +19,7 @@
     height: 50vh;
     background-color: rgba(230, 230, 230, 0.1);
     transition: background-color 0.3s ease, border-color 0.3s ease;
-    overflow: hidden;
+    overflow: auto;
 }
 
 .dropzone-box.dragover {

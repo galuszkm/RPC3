@@ -6,6 +6,7 @@ import { RPC } from '../rpc3';
 import { Buffer } from 'buffer';
 import { useFiles } from "../context/FilesContext"; 
 import { useChannels } from '../context/ChannelsContext';
+import DownloadExampleButton from './DownloadExampleButton';
 import "./Dropzone.css";
 
 const handleFileReading = (f: File): Promise<RPC> => {
@@ -160,7 +161,10 @@ export default function Dropzone() {
   return (
     <div className='dropzone-root'>
       <Toast ref={toast} />
-      <div className='dropzone-title'>Loaded files</div>
+      <div className='dropzone-header'>
+        <div className='dropzone-title'>Loaded files</div>
+        <DownloadExampleButton />
+      </div>
       {renderDropbox()}
     </div>
   );
