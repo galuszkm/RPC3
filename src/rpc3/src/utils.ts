@@ -57,9 +57,9 @@ const fnv1aHash = (str: string): string => {
   return (hash >>> 0).toString(16); // Convert to unsigned 32-bit hex
 };
 
-// Generate a robust filename-based hash (Sync)
-export const generateFileHash = (fileName: string): string => {
-  const normalizedFileName = normalizeFileName(fileName);
+// Generate a robust string-based hash (Sync)
+export const generateHash = (name: string): string => {
+  const normalizedFileName = normalizeFileName(name);
   const timestamp = Date.now().toString(); // Add timestamp to avoid collisions
   return fnv1aHash(normalizedFileName + timestamp);
 };

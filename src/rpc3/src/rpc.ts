@@ -2,7 +2,7 @@
 import { Buffer } from 'buffer';
 import { Channel } from './channel';
 import struct from 'python-struct';
-import { normalizeInt16, formatFileSize, generateFileHash } from './utils';
+import { normalizeInt16, formatFileSize, generateHash } from './utils';
 
 type DataType = 'FLOATING_POINT' | 'SHORT_INTEGER';
 
@@ -46,7 +46,7 @@ export class RPC {
       ...extra_headers
     }
     //  Set hash
-    this._hash = generateFileHash(fileName)
+    this._hash = generateHash(fileName)
   }
 
   public parse(): boolean {
@@ -114,6 +114,7 @@ export class RPC {
     for (let i = 0; i < 3; i++) {
       const [headName, headValue, nextOffset] = parseHeaderBlock(this.bytes, idx);
       if (headName === null || headValue === null || nextOffset === null) {
+        this.Errors.push(`Header ${headName} - invalid value: ${headValue}`)
         return false; // parse error
       }
       idx = nextOffset;
@@ -145,15 +146,15 @@ export class RPC {
     // We've already read 3, so keep going
     for (let headerIndex = 3; headerIndex < numParams; headerIndex++) {
       const [headName, headValue, nextOffset] = parseHeaderBlock(this.bytes, idx);
-      if (!headName || !headValue || !nextOffset) {
-        // Not enough data for another header
-        return false;
+      if (headName === null || headValue === null || nextOffset === null) {
+        this.Errors.push(`Header ${headName} - invalid value: ${headValue}`)
+        return false
       }
       idx = nextOffset;
   
       // Only set if the name is not empty
       if (headName.trim().length > 0) {
-        this.Headers[headName] = headValue;
+        this.Headers[headName] = String(headValue);
         if (this.debug) {
           console.log(`${headName.padEnd(32)}: ${headValue}`);
         }
@@ -226,7 +227,7 @@ export class RPC {
       this.Errors.push(`A mandatory header is missing or invalid: ${err}`);
       return false;
     }
-  
+    
     // Create channels. For each channel, read scale factor, name, units, etc.
     for (let idx = 0; idx < this.Headers.CHANNELS; idx++) {
       let scaleFactor = 1.0;
@@ -293,13 +294,13 @@ export class RPC {
           '\n\tExpected data size in bytes: '+ expected_data_size
         )
       }
-      this.Errors.push('DATA_TYPE error')
+      this.Errors.push(`DATA_TYPE error: size is ${actual_data_size}B - expected ${expected_data_size}B`)
       return false
     }
 
     // Initialize Channel value as Float64Array
     for (let channel = 0; channel < channels; channel++) {
-      const expectedSize = frames * point_per_frame; // ✅ Fix total_frames → frames
+      const expectedSize = frames * point_per_frame;
       this.Channels[channel].value = new Float64Array(expectedSize);
     }
     
@@ -328,7 +329,7 @@ export class RPC {
         }
       }
     }
-
+    
     // Efficiently truncate the array (if needed) without reallocation
     this.Channels.forEach(channel => {
       if (removeLastFrame) {
@@ -336,7 +337,7 @@ export class RPC {
       }
       channel.setMinMax();
     });
-  
+
     return true
   }
 

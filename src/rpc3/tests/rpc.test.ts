@@ -80,3 +80,20 @@ describe('RPC Writing Tests', () => {
     });
   });
 });
+
+describe('Rainflow counting', () => {
+  const filePath = path.join(__dirname, 'data', 'SignalExample.rsp');
+
+  it('should perform rainflow counting of channel without errors', () => {
+    const rpc = readSignal(filePath);
+
+    // Basic checks
+    expect(rpc.Errors.length).toBe(0);
+
+    const channels = rpc.Channels.slice(0, 3)
+    channels.forEach(i => i.rainflow())
+
+    // console.log(channels.map(i).damage(5).toExponential(5))
+    // [ '1.20005e+14', '1.28079e+8', '4.19604e+8' ]
+  });
+});
