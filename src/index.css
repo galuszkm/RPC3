@@ -1,3 +1,17 @@
 html {
     font-size: 14px;
 }
+
+.cbutton {
+    margin-right: 0.5rem;
+    background-color: rgb(113, 162, 236);
+    border-color: rgb(116, 166, 241);
+    padding: 10px 14px 10px 14px
+}
+.cbutton:hover {
+    background-color: rgb(73, 135, 228);
+}
+.cbutton:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
