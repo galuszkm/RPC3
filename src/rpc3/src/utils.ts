@@ -4,25 +4,20 @@ export function linspace(start: number, stop: number, n: number): number[] {
   return Array.from({ length: n }, (_, i) => start + i * step);
 }
 
-export function arrayMax(y: number[]): number {
-  let max = -Infinity;
-  for (let i = 0; i < y.length; i++) {
-    if (y[i] > max) max = y[i];
-  }
-  return max;
-}
-
-export function arrayMin(y: number[]): number {
+export const findMinMax = (arr: Float64Array | number[]): { min: number; max: number } => {
   let min = Infinity;
-  for (let i = 0; i < y.length; i++) {
-    if (y[i] < min) min = y[i];
+  let max = -Infinity;
+  for (let i = 0; i < arr.length; i++) {
+    if (arr[i] < min) min = arr[i];
+    if (arr[i] > max) max = arr[i];
   }
-  return min;
-}
+  return { min, max };
+};
 
-export function normalizeInt16(array: number[]): [Int16Array, number] {
+export function normalizeInt16(array: Float64Array): [Int16Array, number] {
   // Array bounds
-  const absmaxValue = arrayMax([arrayMax(array), Math.abs(arrayMax(array))]);
+  const { max } = findMinMax(array)
+  const absmaxValue = Math.max(max, Math.abs(max));
 
   // Normalization factor
   const factor = absmaxValue / (Math.pow(2, 15) - 1);

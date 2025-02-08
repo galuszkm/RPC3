@@ -2,7 +2,7 @@
 import { Buffer } from 'buffer';
 import { Channel } from './channel';
 import struct from 'python-struct';
-import { arrayMax, normalizeInt16, formatFileSize, generateFileHash } from './utils';
+import { normalizeInt16, formatFileSize, generateFileHash } from './utils';
 
 type DataType = 'FLOATING_POINT' | 'SHORT_INTEGER';
 
@@ -61,7 +61,7 @@ export class RPC {
     const PTS_PER_FRAME = 1024;
 
     const __channels__ = channels.map(c => normalizeInt16(c.value));
-    const __max_chan_len__ = arrayMax(__channels__.map(c => c[0].length));
+    const __max_chan_len__ = Math.max(...__channels__.map(c => c[0].length));
     const FRAMES = Math.ceil(__max_chan_len__ / PTS_PER_FRAME);
     const PTS_PER_GROUP = FRAMES * PTS_PER_FRAME;
 
@@ -297,38 +297,43 @@ export class RPC {
       return false
     }
 
+    // Initialize Channel value as Float64Array
+    for (let channel = 0; channel < channels; channel++) {
+      const expectedSize = frames * point_per_frame; // ✅ Fix total_frames → frames
+      this.Channels[channel].value = new Float64Array(expectedSize);
+    }
+    
     let idx = Number(this.Headers.NUM_HEADER_BLOCKS)*512;
-    for (let frame_group of data_order){
-      for (let channel=0; channel<channels; channel++){
+    const writeIndex = Array(channels).fill(0);
+
+    for (let frame_group of data_order) {
+      for (let channel = 0; channel < channels; channel++) {
         // Set scale factor (use channel scale if data type is SHORT INTEGER)
-        let scale_factor = 1.0;
-        if (dataType === 'SHORT_INTEGER'){
-          // Channel scale
-          scale_factor = this.Channels[channel].scale
-        }
+        let scale_factor = dataType === 'SHORT_INTEGER' ? this.Channels[channel].scale : 1.0;
+  
         // Unpack all frames with struct pkg
         for (let frame = 0; frame < frame_group.length; frame++) {
           const idxLast = idx + point_per_frame * unpackSize;
           const buffer = this.bytes.subarray(idx, idxLast);
+  
           // Unpack the binary data into an array of numbers
           const data = struct.unpack(`<${point_per_frame}${unpackChar}`, buffer) as number[];
-          // Apply scaling efficiently using .map()
-          const scaledData = data.map(d => d * scale_factor);
-          // Push all at once (spreads the array)
-          this.Channels[channel].value.push(...scaledData);
+  
+          // Directly modify `Float64Array` (avoids `.map()` overhead)
+          for (let i = 0; i < data.length; i++) {
+            this.Channels[channel].value[writeIndex[channel]++] = data[i] * scale_factor;
+          }
           // Set last idx as current
           idx = idxLast;
         }
-      
       }
     }
-    // Modify channels
+
+    // Efficiently truncate the array (if needed) without reallocation
     this.Channels.forEach(channel => {
-      // If `removeLastFrame` is true, truncate the array in-place
       if (removeLastFrame) {
-          channel.value.length = point_per_frame * frames; // Efficiently trims excess data
+        channel.value = channel.value.subarray(0, point_per_frame * frames);
       }
-      // Update the min and max values for the channel after all data is processed
       channel.setMinMax();
     });
   

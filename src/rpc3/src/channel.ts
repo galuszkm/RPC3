@@ -1,9 +1,9 @@
 // channel.ts
-import { arrayMax, arrayMin } from './utils';
+import { findMinMax } from './utils';
 import { findReversals, findRainflowCycles, concatenateReversals } from './rainflow';
 
 export class Channel {
-  public value: number[] = [];
+  public value: Float64Array = new Float64Array();
   public min: number = 1e30;
   public max: number = -1e30;
   public isSelected = false;
@@ -32,12 +32,13 @@ export class Channel {
   ) {}
 
   setMinMax(): void {
-    this.max = arrayMax(this.value);
-    this.min = arrayMin(this.value);
+    const {min, max} = findMinMax(this.value);
+    this.max = max
+    this.min = min
   }
 
   rainflow(k = 256, repeats = 1): void {
-    const [reversals, revIdx] = findReversals(this.value, k);
+    const [reversals, revIdx] = findReversals(Array.from(this.value), k);
     let [cycles, residue] = findRainflowCycles(reversals);
 
     // Multiply closed cycles by repetitions

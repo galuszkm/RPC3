@@ -1,12 +1,11 @@
 // rainflow.ts
-import { arrayMin, arrayMax, linspace } from './utils';
+import { findMinMax, linspace } from './utils';
 
 export function getLoadClassBoundaries(y: number[], k: number): number[] {
-  const ymin = arrayMin(y);
-  const ymax = arrayMax(y);
-  const dy = (ymax - ymin) / (2.0 * k);
-  const y0 = ymin - dy;
-  const y1 = ymax + dy;
+  const {min, max} = findMinMax(y)
+  const dy = (max - min) / (2.0 * k);
+  const y0 = min - dy;
+  const y1 = max + dy;
   return linspace(y0, y1, k + 2);
 }
 

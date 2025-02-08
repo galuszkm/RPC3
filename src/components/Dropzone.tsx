@@ -112,7 +112,7 @@ export default function Dropzone() {
 
   const renderDropboxInfoMark = () => {
     return (
-      <div className='dropzone-box-empty' style={{opacity: Math.max(1-0.333*files.length, 0)}}>
+      <div className='dropzone-box-empty' style={{opacity: Math.max(1-0.2*files.length, 0)}}>
         <i 
           className="pi pi-download mt-3 p-5" 
           style={{fontSize: '5em', borderRadius: '50%', color: '#cbcdd0'}}
