@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
@@ -39,6 +39,8 @@ const handleFileReading = (f: File): Promise<RPC> => {
 export default function Dropzone() {
   // Local states and refs
   const toast = useRef<Toast>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Use context to manage the files upload
   const { files, addFile, removeFile } = useFiles(); 
@@ -47,8 +49,19 @@ export default function Dropzone() {
   // ============================================================
   // MIDDLEWARES
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
   const handleFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); // Prevent default browser behavior (e.g., opening the file)
+    setIsDragging(false);
+    setIsLoading(true);
     let droppedFiles: File[] = Array.from(e.dataTransfer?.files || []);
 
     // Read all dragged files
@@ -66,6 +79,8 @@ export default function Dropzone() {
         }
       }
     ));
+    // Disable loading
+    setIsLoading(false)
   };
 
   const handleFileRemove = (hash: string) => {
@@ -95,9 +110,9 @@ export default function Dropzone() {
     );
   };
 
-  const renderEmptyDropbox = () => {
+  const renderDropboxInfoMark = () => {
     return (
-      <div className='dropzone-box-empty'>
+      <div className='dropzone-box-empty' style={{opacity: Math.max(1-0.333*files.length, 0)}}>
         <i 
           className="pi pi-download mt-3 p-5" 
           style={{fontSize: '5em', borderRadius: '50%', color: '#cbcdd0'}}
@@ -109,13 +124,36 @@ export default function Dropzone() {
     );
   };
 
+  // Render loading spinner or file list
+  const renderDropboxContent = () => {
+    if (isLoading){
+      return (
+        <div className="overlay" style={{background: 'none'}}>
+          <div className="loading-box">
+            <div className="spinner" />
+          </div>
+          <span style={{ fontSize: '1.3rem', color: 'var(--text-color-secondary)' }}>
+            Loading data ...
+          </span>
+        </div>
+      )
+    }
+    return (
+      <>
+        {files.map((i, idx) => renderFileRow(i, idx))}
+        {renderDropboxInfoMark()}
+      </>
+    )
+  }
+
   const renderDropbox = () => (
     <div 
-        className="flex align-items-center flex-column dropzone-box"
+        className={`lex align-items-center flex-column dropzone-box ${isDragging ? "dragover" : ""}`}
         onDrop={handleFileDrop}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
      >
-      {files.length ? files.map((i, idx) => renderFileRow(i, idx)) : renderEmptyDropbox()}
+      {renderDropboxContent()}
      </div>
   )
 
