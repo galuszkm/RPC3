@@ -1,3 +1,4 @@
+
 export function linspace(start: number, stop: number, n: number): number[] {
   if (n === 1) return [start];
   const step = (stop - start) / (n - 1);
@@ -63,3 +64,23 @@ export const generateHash = (name: string): string => {
   const timestamp = Date.now().toString(); // Add timestamp to avoid collisions
   return fnv1aHash(normalizedFileName + timestamp);
 };
+
+/**
+ * Calculates total damage based on range and cycle count pairs.
+ * 
+ * @param {number} slope - The exponent used in the damage calculation.
+ * @param {Float64Array} range_counts - Input cycle data as [range1, count1, range2, count2, ...].
+ * @returns {number} - The total damage sum.
+ */
+export function calcDamage(slope: number, range_counts: Float64Array): number {
+  let totalDamage = 0;
+
+  // Process range_counts as pairs [range, count]
+  for (let i = 0; i < range_counts.length; i += 2) {
+    const range = range_counts[i];        // Range value
+    const count = range_counts[i + 1];    // Count value
+    totalDamage += Math.pow(range, slope) * count;
+  }
+
+  return totalDamage;
+}

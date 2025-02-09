@@ -40,6 +40,9 @@ export class RPC {
     private debug: boolean = false, 
     private extra_headers: HeaderMap = {}
   ) {
+    // Parse file name
+    this.fileName = fileName.split('.')[0];
+    // Set extra headers
     this.extra_headers = {
       INT_FULL_SCALE: 2 ** 15,
       DATA_TYPE: 'SHORT_INTEGER',

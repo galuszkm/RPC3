@@ -1,5 +1,8 @@
 // rainflow.ts
 import { findMinMax, linspace } from './utils';
+import { CumulativeDataType } from './types';
+import { Channel } from './channel';
+import { EventType, RFResultType } from './types';
 
 /**
  * 1) Discretize the signal into k bins
@@ -109,7 +112,21 @@ export function findReversals(signal: Float64Array, k=1024): [Float64Array, Int3
   return [outZ, outI];
 }
 
-/** Helper for trivial "all constant" edge case. */
+/**
+ * Creates a new reversal pair for the "all constant" edge case.
+ *
+ * This function constructs two typed arrays:
+ * - A `Float64Array` containing two reversal values `[val0, val1]`.
+ * - An `Int32Array` containing their corresponding indices `[idx0, idx1]`.
+ *
+ * @param {number} val0 - First reversal value.
+ * @param {number} val1 - Second reversal value.
+ * @param {number} idx0 - Index of `val0` in the original dataset.
+ * @param {number} idx1 - Index of `val1` in the original dataset.
+ * @returns {[Float64Array, Int32Array]} - A tuple containing:
+ *          - `Float64Array` with two reversal values.
+ *          - `Int32Array` with two corresponding indices.
+ */
 function newReversalPair(val0: number, val1: number, idx0: number, idx1: number): [Float64Array, Int32Array] {
   const r = new Float64Array([val0, val1]);
   const i = new Int32Array([idx0, idx1]);
@@ -170,12 +187,17 @@ function concatFloat64(a: Float64Array, b: Float64Array): Float64Array {
 
 /**
  * Stack-based approach to detect rainflow cycles from a reversal array.
- * Returns [closedCycles, residue].
- * closedCycles is an array of [startValue, endValue].
- * residue is the leftover stack as a Float64Array (for possible next pass).
+ * 
+ * This function identifies closed rainflow cycles based on a stack-based method,
+ * following the standard 4-point rainflow cycle counting rule.
+ * 
+ * @param {Float64Array} reversals - The input array of reversal points.
+ * @returns {[Float64Array, Float64Array]} 
+ *          - `closedCycles`: A `Float64Array` containing detected cycles as flat pairs `[start1, end1, start2, end2, ...]`.
+ *          - `residue`: A `Float64Array` of remaining reversals that couldn't form closed cycles.
  */
-export function findRainflowCyclesStack(reversals: Float64Array): [Array<[number, number]>, Float64Array] {
-  const cycles: Array<[number, number]> = [];
+export function findRainflowCyclesStack(reversals: Float64Array): [Float64Array, Float64Array] {
+  const cycles: number[] = [];
   // We'll build up a stack of numbers as we go
   const stack: number[] = [];
 
@@ -197,7 +219,7 @@ export function findRainflowCyclesStack(reversals: Float64Array): [Array<[number
       // Standard 4-point rule
       if (dS2 <= dS1 && dS2 <= dS3) {
         // We have a closed cycle from S1->S2
-        cycles.push([S1, S2]);
+        cycles.push(S1, S2);
         // Remove S1, S2 from stack (the middle two of top 4)
         // effectively pop them out but keep S0, S3
         // A quick way: pop last 3, then push S3 again
@@ -213,24 +235,294 @@ export function findRainflowCyclesStack(reversals: Float64Array): [Array<[number
     residue[i] = stack[i];
   }
 
-  return [cycles, residue];
+  return [new Float64Array(cycles), residue];
 }
 
 /**
- * Multiply cycles by 'repeats' (simple expansion).
- * If repeats is huge and you only need frequencies,
- * consider storing counts instead of expanding.
+ * Duplicates a sequence of peak-valley cycle data multiple times.
+ * 
+ * Given a `Float64Array` representing cycles in the format `[peak1, valley1, peak2, valley2, ...]`,
+ * this function concatenates the full sequence `repeats` times.
+ * 
+ * @param {Float64Array} cycles - The input array containing peak-valley cycles.
+ * @param {number} repeats - The number of times to repeat the full cycle sequence.
+ * @returns {Float64Array} - A new `Float64Array` containing the concatenated cycles.
  */
-export function multiplyCycles(cycles: Array<[number, number]>, repeats: number): Array<[number, number]> {
-  const out: Array<[number, number]> = [];
-  out.length = cycles.length * repeats; // pre-allocate
+export function multiplyCycles(cycles: Float64Array, repeats: number): Float64Array {
+  if (repeats <= 1) return cycles; // No duplication needed if repeats = 1
 
-  let idx = 0;
-  for (let i = 0; i < cycles.length; i++) {
-    const cycle = cycles[i];
-    for (let r = 0; r < repeats; r++) {
-      out[idx++] = cycle;
+  const cycleLength = cycles.length; // Original cycle sequence length
+  const totalSize = cycleLength * repeats; // Final array size after duplication
+  const multipliedCycles = new Float64Array(totalSize); // Allocate memory
+
+  for (let i = 0; i < repeats; i++) {
+    multipliedCycles.set(cycles, i * cycleLength); // Copy full sequence at correct offset
+  }
+
+  return multipliedCycles;
+}
+
+/**
+ * Performs rainflow cycle counting on a time-history signal.
+ *
+ * This function:
+ * - Identifies reversal points in the input data using discretization (`k` parameter).
+ * - Detects closed rainflow cycles and residuals using a stack-based method.
+ * - Optionally closes residuals by repeating them and extracting additional cycles.
+ * - Returns the detected reversals, their indices, the full cycle list, and residuals.
+ *
+ * @param {Float64Array} value - The input time-history signal to analyze.
+ * @param {boolean} close_residuals - If `true`, attempts to close residuals by repeating them.
+ * @param {number} [k=2**12] - Discretization parameter controlling reversal detection sensitivity.
+ * @returns {{
+*   reversals: Float64Array,
+*   revIdx: Int32Array,
+*   cycles: Float64Array,
+*   residuals: Float64Array
+* }} - An object containing:
+*   - `reversals`: Detected reversal points.
+*   - `revIdx`: Indices of reversals in the original signal.
+*   - `cycles`: Extracted closed rainflow cycles as [peak1, valley1, peak2, valley2, ...].
+*   - `residuals`: Remaining reversals that could not form complete cycles.
+*/
+export function rainflow_counting(value: Float64Array, close_residuals: boolean, k: number=2**12): RFResultType {
+  // Find reversals (discretize + pick turning points)
+  const [reversals, revIdx] = findReversals(value, k);
+
+  // Find closed cycles + residue (stack-based)
+  const [cycles, residue] = findRainflowCyclesStack(reversals);
+
+  // Close the residuals by concatenating residue + residue
+  // and extracting any cycles from that.
+  let resCycles: Float64Array = new Float64Array()
+  if (close_residuals) {
+    const closedResiduals = concatenateReversals(residue, residue);
+    [resCycles] = findRainflowCyclesStack(closedResiduals);
+  }
+  // Combine cycles and resCycles into a single Float64Array
+  const totalSize = cycles.length + resCycles.length;
+  const allCycles = new Float64Array(totalSize);
+  allCycles.set(cycles, 0);
+  allCycles.set(resCycles, cycles.length);
+
+  return {
+    reversals: reversals,
+    revIdx: revIdx,
+    cycles: allCycles,
+    residuals: residue,
+  }
+}
+
+/**
+ * Counts rainflow range cycles and aggregates cycle counts.
+ *
+ * This function processes a sequence of peaks and valleys stored in `Float64Array` format
+ * and computes the corresponding range cycle counts. It:
+ * - Computes the absolute difference (range) between each [peak, valley] pair.
+ * - Aggregates duplicate ranges by summing cycle counts.
+ * - Supports an optional `repeats` parameter for weighting the counts.
+ * - Returns a sorted `Float64Array` of `[range1, count1, range2, count2, ...]`.
+ *
+ * @param {Float64Array} cycles - Input peak-valley cycle data as [peak1, valley1, peak2, valley2, ...].
+ * @param {number} [repeats=1] - Number of times to multiply cycle counts.
+ * @returns {Float64Array} - Sorted unique [range, count] pairs stored in a `Float64Array`.
+ */
+export function count_range_cycles(cycles: Float64Array, repeats: number=1): Float64Array {
+  // Process the input Float64Array
+  // Array is [peak1, valey1, peak2, valey2, ...]
+  const rangeMap = new Map<number, number>();
+  for (let i = 0; i < cycles.length; i += 2) {
+    const start = cycles[i];
+    const end = cycles[i + 1];
+    const rng = Math.abs(end - start);
+    rangeMap.set(rng, (rangeMap.get(rng) ?? 0) + repeats);
+  }
+  // Get sorted unique ranges
+  const uniqueRanges = Array.from(rangeMap.keys()).sort((a, b) => b - a);
+
+  // Allocate a Float64Array for the output [range1, counts1, range2, counts2, ...]
+  const result = new Float64Array(uniqueRanges.length * 2);
+  let index = 0;
+  for (const r of uniqueRanges) {
+    result[index++] = r;
+    result[index++] = rangeMap.get(r)!; // Store count
+  }
+
+  return result;
+}
+
+/**
+ * Merges duplicate ranges by summing their counts and returns a sorted Float64Array.
+ *
+ * This function processes an already counted range-cycle dataset,
+ * summing duplicate ranges and returning a sorted unique list.
+ * It:
+ * - Takes precomputed `[range, count]` pairs and merges duplicate ranges.
+ * - Sorts the result in descending order.
+ * - Returns a new `Float64Array` of `[range1, count1, range2, count2, ...]`.
+ *
+ * @param {Float64Array} range_counts - Input cycle data as [range1, count1, range2, count2, ...].
+ * @returns {Float64Array} - Sorted unique [range, count] pairs stored in a `Float64Array`.
+ */
+export function count_unique_ranges(range_counts: Float64Array): Float64Array {
+  // Merge duplicated range counts
+  const rangeMap = new Map<number, number>();
+
+  // Process range_counts as pairs [range, count]
+  for (let i = 0; i < range_counts.length; i += 2) {
+    const rng = range_counts[i];        // Range value
+    const count = range_counts[i + 1];  // Count value
+    rangeMap.set(rng, (rangeMap.get(rng) ?? 0) + count);
+  }
+  // Extract and sort unique ranges
+  const uniqueRanges = Array.from(rangeMap.keys()).sort((a, b) => b - a);
+
+  // Allocate a Float64Array for the result
+  const result = new Float64Array(uniqueRanges.length * 2);
+  let index = 0;
+  for (const r of uniqueRanges) {
+    result[index++] = r;
+    result[index++] = rangeMap.get(r)!; // Store merged count
+  }
+
+  return result;
+}
+
+/**
+ * Combines and processes range counts from multiple channels and events.
+ *
+ * This function:
+ * - Concatenates `range_counts` from all channels.
+ * - Expands `residuals` based on the event repetitions.
+ * - Performs rainflow counting on the combined residuals.
+ * - Merges the counted cycles from residuals into the main `range_counts`.
+ * - Returns a unique, sorted `Float64Array` of `[range, count]` pairs.
+ *
+ * @param {Channel[]} channels - Array of channel objects containing `range_counts` and `residuals`.
+ * @param {EventType[]} events - Array of events providing repetition counts for each channel.
+ * @returns {Float64Array} - A merged and processed `Float64Array` of `[range, count]` pairs.
+ */
+export function combine_channels_range_counts(channels: Channel[], events:EventType[]): Float64Array {
+  // Concatenate all range_counts
+  // Range counts already include event repetitions 
+  // Assuming they were passed in channel.rainflow() invocation
+
+  // Step 1: Compute total required length
+  const totalLength = channels.reduce((sum, channel) => sum + channel.range_counts.length, 0);
+  // Step 2: Allocate Float64Array with total size
+  const rangeCounts = new Float64Array(totalLength);
+  // Step 3: Fill the array in a loop
+  let offset = 0;
+  for (const channel of channels) {
+    rangeCounts.set(channel.range_counts, offset);
+    offset += channel.range_counts.length;
+  }
+
+  // Calculate total residuals size (considering repetitions)
+  const totalResidualLength = channels.reduce((acc, channel) => {
+    const repetitions = events.find(i => i.hash === channel.fileHash)?.repetitions || 1;
+    return acc + channel.residuals.length * repetitions;
+  }, 0);
+  // Create a Float64Array with the total length
+  const totalResiduals = new Float64Array(totalResidualLength);
+
+  // Fill `totalResiduals` by repeating each channel's residuals
+  offset = 0;
+  for (const channel of channels) {
+    const repetitions = events.find(i => i.hash === channel.fileHash)?.repetitions || 1;
+    for (let r = 0; r < repetitions; r++) {
+      totalResiduals.set(channel.residuals, offset);
+      offset += channel.residuals.length;
     }
   }
-  return out;
+  // Perform rainflow counting on residuals
+  // Now require to close the residuals of combined residuals
+  const { cycles } = rainflow_counting(totalResiduals, true);
+  
+  // Add counted cycles from rainflow of residuals to combined range counts
+  // Residuals were already repeated in loop above, so set repeat to 1
+  const countedResidualCycles = count_range_cycles(cycles, 1);
+  const totalRangeCounts = new Float64Array(rangeCounts.length + countedResidualCycles.length);
+  totalRangeCounts.set(rangeCounts, 0);
+  totalRangeCounts.set(countedResidualCycles, rangeCounts.length);
+
+  return count_unique_ranges(totalRangeCounts)
+}
+
+/**
+ * Computes cumulative rainflow data from input cycles.
+ *  - Merges duplicate range values
+ *  - Filters based on `gate` threshold
+ *  - Sorts in descending order
+ *  - Computes damage percentage and cumulative damage
+ *  - Produces step-like arrays for plotting
+ *
+ * @param {Float64Array} data - Input cycle data as [range1, count1, range2, count2, ...].
+ * @param {number} slope - The exponent for damage calculation.
+ * @param {number} [gate=0] - Percentage threshold of max range for filtering cycles.
+ * @returns {CumulativeDataType} - Computed `{ range, ncum, dcum, totalDamage }` as `Float64Array`.
+ */
+export function cumulative_rainflow_data(data: Float64Array, slope: number, gate: number=0): CumulativeDataType {
+  // Find max range
+  let maxRange = 0;
+  for (let i = 0; i < data.length; i += 2) {
+    maxRange = Math.max(maxRange, data[i]);
+  }
+
+  // Sum duplicates while filtering by gate threshold
+  const rangeMap = new Map<number, number>();
+  for (let i = 0; i < data.length; i += 2) {
+    const range = data[i];
+    const count = data[i + 1];
+    if (range > (maxRange * gate) / 100) {
+      rangeMap.set(range, (rangeMap.get(range) ?? 0) + count);
+    }
+  }
+
+  // Extract and sort unique ranges
+  const uniqueRanges = Array.from(rangeMap.keys()).sort((a, b) => b - a);
+  let len = uniqueRanges.length;
+
+  // Allocate typed arrays
+  const uniqueCycles = new Float64Array(len);
+  for (let i = 0; i < len; i++) {
+    uniqueCycles[i] = rangeMap.get(uniqueRanges[i])!;
+  }
+
+  // Compute damage array = (range^slope) * cycles
+  const damageArray = new Float64Array(len);
+  let damageSum = 0;
+  for (let i = 0; i < len; i++) {
+    damageArray[i] = Math.pow(uniqueRanges[i], slope) * uniqueCycles[i];
+    damageSum += damageArray[i];
+  }
+
+  // Compute damage percentage
+  const damagePercent = new Float64Array(len);
+  for (let i = 0; i < len; i++) {
+    damagePercent[i] = (damageArray[i] / damageSum) * 100;
+  }
+
+  // Compute cumulative cycles (Ncum) and cumulative damage% (Dcum)
+  const NcumRaw = new Float64Array(len + 1);
+  const DcumRaw = new Float64Array(len + 1);
+  NcumRaw[0] = 1;  // Start Ncum at 1
+  DcumRaw[0] = 100; // Start Dcum at 100
+  let cycleAcc = 0;
+  let dmgAcc = 0;
+
+  for (let i = 0; i < len; i++) {
+    cycleAcc += uniqueCycles[i];
+    dmgAcc += damagePercent[i];
+    NcumRaw[i + 1] = cycleAcc;
+    DcumRaw[i + 1] = dmgAcc;
+  }
+
+  // Return computed results
+  return {
+    range: new Float64Array([uniqueRanges[0], ...uniqueRanges]),  
+    ncum: NcumRaw,
+    dcum: DcumRaw,
+    totalDamage: damageSum,
+  };
 }

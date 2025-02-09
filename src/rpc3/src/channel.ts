@@ -1,6 +1,14 @@
 // channel.ts
-import { findMinMax, generateHash } from './utils';
-import { findReversals, findRainflowCyclesStack, multiplyCycles, concatenateReversals} from './rainflow';
+import { findMinMax, generateHash, calcDamage } from './utils';
+import { rainflow_counting, count_range_cycles } from './rainflow';
+
+const rf_init = () => ({
+  reversals: new Float64Array(0),
+  revIdx: new Int32Array(0),
+  cycles: [],
+  residuals: new Float64Array(0),
+  range_counts: new Float64Array(0),
+})
 
 export class Channel {
   public value: Float64Array = new Float64Array(0);
@@ -13,7 +21,8 @@ export class Channel {
     reversals: Float64Array;
     revIdx: Int32Array;
     cycles: Array<[number, number]>;
-    range_counts: Array<[number, number]>;
+    residuals: Float64Array;
+    range_counts: Float64Array;
   };
 
   constructor(
@@ -25,12 +34,7 @@ export class Channel {
     public filename?: string,
     public fileHash?: string,
   ) {
-    this.rf = {
-      reversals: new Float64Array(0),
-      revIdx: new Int32Array(0),
-      cycles: [],
-      range_counts: [],
-    }
+    this.rf = rf_init();
     //  Set hash
     this._hash = generateHash(Number + Name + filename) + fileHash;
   }
@@ -41,55 +45,16 @@ export class Channel {
     this.min = min
   }
 
-  rainflow(repeats=1, k=2**15): void {
-    // Find reversals (discretize + pick turning points)
-    const [reversals, revIdx] = findReversals(this.value, k);
-
-    // Find closed cycles + residue (stack-based)
-    let [cycles, residue] = findRainflowCyclesStack(reversals);
-
-    // Multiply the closed cycles by "repeats" if needed
-    if (repeats > 1) {
-      cycles = multiplyCycles(cycles, repeats);
-    }
-
-    // Close the residuals by concatenating residue + residue
-    // and extracting any cycles from that.
-    const closedResiduals = concatenateReversals(residue, residue);
-    let [resCycles] = findRainflowCyclesStack(closedResiduals);
-    if (repeats > 1) {
-      resCycles = multiplyCycles(resCycles, repeats);
-    }
-
-    // Combine all cycles
-    const allCycles = cycles.concat(resCycles);
-
-    // Store rainflow results
-    this.rf.reversals = reversals;
-    this.rf.revIdx = revIdx;
-    this.rf.cycles = allCycles;
-    
-    // -----------------------------------------
+  rainflow(repeats=1, close_residuals=true, k=2**12): void {
+    const { cycles, residuals } = rainflow_counting(this.value, close_residuals, k)
+    // Save residuals
+    this.rf.residuals = residuals;
     // Count unique cycles based on range
-
-    // Accumulate counts in a Map
-    const rangeMap = new Map<number, number>();
-    // Build counts
-    for (const [start, end] of allCycles) {
-      const rng = Math.abs(end - start);
-      rangeMap.set(rng, (rangeMap.get(rng) ?? 0) + 1);
-    }
-    // Sort the unique ranges
-    const uniqueRanges = Array.from(rangeMap.keys()).sort((a, b) => b - a);
-    // Build an array of [range, count] and set to rainflow results
-    this.rf.range_counts = uniqueRanges.map(r => [r, rangeMap.get(r)!]);
-
+    this.rf.range_counts = count_range_cycles(cycles, repeats);
   }
 
   damage(slope: number): number {
-    return this.rf.range_counts
-      .map(([range, count]) => Math.pow(range, slope) * count)
-      .reduce((sum, value) => sum + value, 0);
+    return calcDamage(slope, this.range_counts)
   }
 
   get hash() {
@@ -106,5 +71,13 @@ export class Channel {
 
   get range_counts() {
     return this.rf.range_counts
+  }
+
+  get residuals() {
+    return this.rf.residuals
+  }
+
+  clearRF(): void{
+    this.rf = rf_init();
   }
 }
