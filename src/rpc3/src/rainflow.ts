@@ -2,7 +2,7 @@
 import { findMinMax, linspace } from './utils';
 import { CumulativeDataType } from './types';
 import { Channel } from './channel';
-import { EventType, RFResultType } from './types';
+import { EventType, RFResultType, CombineChannelsType } from './types';
 
 /**
  * 1) Discretize the signal into k bins
@@ -242,20 +242,20 @@ export function findRainflowCyclesStack(reversals: Float64Array): [Float64Array,
  * Duplicates a sequence of peak-valley cycle data multiple times.
  * 
  * Given a `Float64Array` representing cycles in the format `[peak1, valley1, peak2, valley2, ...]`,
- * this function concatenates the full sequence `repeats` times.
+ * this function concatenates the full sequence `repets` times.
  * 
  * @param {Float64Array} cycles - The input array containing peak-valley cycles.
- * @param {number} repeats - The number of times to repeat the full cycle sequence.
+ * @param {number} repets - The number of times to repeat the full cycle sequence.
  * @returns {Float64Array} - A new `Float64Array` containing the concatenated cycles.
  */
-export function multiplyCycles(cycles: Float64Array, repeats: number): Float64Array {
-  if (repeats <= 1) return cycles; // No duplication needed if repeats = 1
+export function multiplyCycles(cycles: Float64Array, repets: number): Float64Array {
+  if (repets <= 1) return cycles; // No duplication needed if repets = 1
 
   const cycleLength = cycles.length; // Original cycle sequence length
-  const totalSize = cycleLength * repeats; // Final array size after duplication
+  const totalSize = cycleLength * repets; // Final array size after duplication
   const multipliedCycles = new Float64Array(totalSize); // Allocate memory
 
-  for (let i = 0; i < repeats; i++) {
+  for (let i = 0; i < repets; i++) {
     multipliedCycles.set(cycles, i * cycleLength); // Copy full sequence at correct offset
   }
 
@@ -320,14 +320,14 @@ export function rainflow_counting(value: Float64Array, close_residuals: boolean,
  * and computes the corresponding range cycle counts. It:
  * - Computes the absolute difference (range) between each [peak, valley] pair.
  * - Aggregates duplicate ranges by summing cycle counts.
- * - Supports an optional `repeats` parameter for weighting the counts.
+ * - Supports an optional `repets` parameter for weighting the counts.
  * - Returns a sorted `Float64Array` of `[range1, count1, range2, count2, ...]`.
  *
  * @param {Float64Array} cycles - Input peak-valley cycle data as [peak1, valley1, peak2, valley2, ...].
- * @param {number} [repeats=1] - Number of times to multiply cycle counts.
+ * @param {number} [repets=1] - Number of times to multiply cycle counts.
  * @returns {Float64Array} - Sorted unique [range, count] pairs stored in a `Float64Array`.
  */
-export function count_range_cycles(cycles: Float64Array, repeats: number=1): Float64Array {
+export function count_range_cycles(cycles: Float64Array, repets: number=1): Float64Array {
   // Process the input Float64Array
   // Array is [peak1, valey1, peak2, valey2, ...]
   const rangeMap = new Map<number, number>();
@@ -335,7 +335,7 @@ export function count_range_cycles(cycles: Float64Array, repeats: number=1): Flo
     const start = cycles[i];
     const end = cycles[i + 1];
     const rng = Math.abs(end - start);
-    rangeMap.set(rng, (rangeMap.get(rng) ?? 0) + repeats);
+    rangeMap.set(rng, (rangeMap.get(rng) ?? 0) + repets);
   }
   // Get sorted unique ranges
   const uniqueRanges = Array.from(rangeMap.keys()).sort((a, b) => b - a);
@@ -402,7 +402,7 @@ export function count_unique_ranges(range_counts: Float64Array): Float64Array {
  * @param {EventType[]} events - Array of events providing repetition counts for each channel.
  * @returns {Float64Array} - A merged and processed `Float64Array` of `[range, count]` pairs.
  */
-export function combine_channels_range_counts(channels: Channel[], events:EventType[]): Float64Array {
+export function combine_channels_range_counts(channels: Channel[], events:EventType[]): CombineChannelsType {
   // Concatenate all range_counts
   // Range counts already include event repetitions 
   // Assuming they were passed in channel.rainflow() invocation
@@ -446,7 +446,10 @@ export function combine_channels_range_counts(channels: Channel[], events:EventT
   totalRangeCounts.set(rangeCounts, 0);
   totalRangeCounts.set(countedResidualCycles, rangeCounts.length);
 
-  return count_unique_ranges(totalRangeCounts)
+  return {
+    residualCycles: cycles,
+    rangeCounts: count_unique_ranges(totalRangeCounts)
+  }
 }
 
 /**

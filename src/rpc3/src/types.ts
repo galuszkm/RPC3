@@ -17,3 +17,8 @@ export interface RFResultType {
   cycles: Float64Array;
   residuals: Float64Array;
 }
+
+export interface CombineChannelsType {
+  residualCycles: Float64Array,
+  rangeCounts: Float64Array,
+}
