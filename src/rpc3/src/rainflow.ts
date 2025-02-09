@@ -10,7 +10,7 @@ import { EventType, RFResultType, CombineChannelsType } from './types';
  * 
  * Returns [reversalValues, reversalIndices].
  */
-export function findReversals(signal: Float64Array, k=1024): [Float64Array, Int32Array] {
+function findReversals(signal: Float64Array, k=1024): [Float64Array, Int32Array] {
   const n = signal.length;
   if (n < 2) {
     // trivial
@@ -137,7 +137,7 @@ function newReversalPair(val0: number, val1: number, idx0: number, idx1: number)
  * Concatenate two reversal arrays optimally, checking sign conditions
  * to avoid duplications or produce an invalid sequence.
  */
-export function concatenateReversals(rev1: Float64Array, rev2: Float64Array): Float64Array {
+function concatenateReversals(rev1: Float64Array, rev2: Float64Array): Float64Array {
   const n1 = rev1.length;
   const n2 = rev2.length;
 
@@ -196,7 +196,7 @@ function concatFloat64(a: Float64Array, b: Float64Array): Float64Array {
  *          - `closedCycles`: A `Float64Array` containing detected cycles as flat pairs `[start1, end1, start2, end2, ...]`.
  *          - `residue`: A `Float64Array` of remaining reversals that couldn't form closed cycles.
  */
-export function findRainflowCyclesStack(reversals: Float64Array): [Float64Array, Float64Array] {
+function findRainflowCyclesStack(reversals: Float64Array): [Float64Array, Float64Array] {
   const cycles: number[] = [];
   // We'll build up a stack of numbers as we go
   const stack: number[] = [];
@@ -236,30 +236,6 @@ export function findRainflowCyclesStack(reversals: Float64Array): [Float64Array,
   }
 
   return [new Float64Array(cycles), residue];
-}
-
-/**
- * Duplicates a sequence of peak-valley cycle data multiple times.
- * 
- * Given a `Float64Array` representing cycles in the format `[peak1, valley1, peak2, valley2, ...]`,
- * this function concatenates the full sequence `repets` times.
- * 
- * @param {Float64Array} cycles - The input array containing peak-valley cycles.
- * @param {number} repets - The number of times to repeat the full cycle sequence.
- * @returns {Float64Array} - A new `Float64Array` containing the concatenated cycles.
- */
-export function multiplyCycles(cycles: Float64Array, repets: number): Float64Array {
-  if (repets <= 1) return cycles; // No duplication needed if repets = 1
-
-  const cycleLength = cycles.length; // Original cycle sequence length
-  const totalSize = cycleLength * repets; // Final array size after duplication
-  const multipliedCycles = new Float64Array(totalSize); // Allocate memory
-
-  for (let i = 0; i < repets; i++) {
-    multipliedCycles.set(cycles, i * cycleLength); // Copy full sequence at correct offset
-  }
-
-  return multipliedCycles;
 }
 
 /**
