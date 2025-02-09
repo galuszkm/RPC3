@@ -1,38 +1,5 @@
 import { findMax, findMin } from "./utils";
-
-// ************************************************************
-// Define types for Rainflow cycles and Equivalent Signal
-
-export interface RainflowDataColumns {
-  range: Float64Array;
-  damageOfCycle: Float64Array;
-  cumulDamage: Float64Array;
-  cycleIndex: Float64Array;
-  percCumDamage: Float64Array;
-  maxOfCycle: Float64Array;
-  cycleReptes: Float64Array;
-  minOfCycle: Float64Array;
-}
-// Equivalent signal row
-// [range, mean, repetition, %damage, damage, lastOne]
-type EquivalentSignalRow = [
-  number, // range
-  number, // mean
-  number, // repetition
-  number, // percentDamage
-  number, // damage
-  number, // average_mean_for_block
-];
-
-// Equivalent signal row for final output (ave mean as 2nd element)
-// [range, mean, repetition, %damage, damage, lastOne]
-type EqSignalRow = [
-  number, // range
-  number, // average_mean_for_block
-  number, // repetition
-  number, // percentDamage
-  number, // damage
-];
+import { RainflowDataColumns, EquivalentSignalRow } from "./types";
 
 /**
  * Parses multiple signals of rainflow peak/valley pairs into a column-based structure.
@@ -524,8 +491,6 @@ function adjustBlockMeansToGlobalMinMax(eqSignal: EquivalentSignalRow[]): void {
  *      block repetitions) meets or exceeds `minNumOfCycles`. If `increasedBlockDmg` is enabled,
  *      the last block is forced to span the full global load range.
  *   6. Adjusts block mean values so that they do not exceed the global minimum or maximum loads.
- *   7. Reformats the final equivalent signal blocks to output rows in the order:
- *      [range, average mean, repetition, percentage damage, block damage].
  *
  * The resulting array of blocks is then reversed before being returned.
  *
@@ -535,13 +500,13 @@ function adjustBlockMeansToGlobalMinMax(eqSignal: EquivalentSignalRow[]): void {
  * @param blocksNumber - The desired number of blocks for the equivalent signal.
  * @param minNumOfCycles - The minimum required total number of cycles in the equivalent signal.
  * @param slope - The fatigue slope (exponent) used in the damage calculation (damage = range^slope * repetitions).
- * @returns An array of EqSignalRow, where each row represents a block in the order:
- *          [range, average mean, repetition, percentage damage, block damage].
+ * @returns An array of EquivalentSignalRow, where each row represents a block in the order:
+ *          [range, mean, repetition, percentage damage, block damage].
  * @throws Error if the total number of cycles in the input is less than the requested minimum.
  */
 function calculateEqSignal(
   columns: RainflowDataColumns, blocksNumber: number, minNumOfCycles: number, slope: number
-): EqSignalRow[] {
+): EquivalentSignalRow[] {
   // Hardcode "increasedBlockDmg"
   const increasedBlockDmg = true;
 
@@ -551,7 +516,7 @@ function calculateEqSignal(
     totalNumCyclesOriginal += columns.cycleReptes[i];
   }
   if (totalNumCyclesOriginal < minNumOfCycles) {
-    throw new Error("Original no of cycles is already < requested minimum.");
+    throw new Error("Original signal has less cycles than requested minimum.");
   }
 
   // Sort columns by ascending range, and compute totalDamage
@@ -573,11 +538,7 @@ function calculateEqSignal(
   // Adjust block means so we don't exceed global min or max
   adjustBlockMeansToGlobalMinMax(eqSignal);
 
-  // Set average mean of block to 2nd column
-  const parsedEqSignal = eqSignal.map(i => [
-    i[0], i[5], i[2], i[3], i[4]
-  ]) as unknown as EqSignalRow[]
-  return parsedEqSignal.reverse();
+  return eqSignal.reverse();
 }
 
 /**
@@ -590,18 +551,18 @@ function calculateEqSignal(
  * 2. Processes the columnar data with the block-signal algorithm via `calculateEqSignal`
  *    to segment the load history into fatigue-representative blocks, scale them to meet
  *    a specified minimum cycle count, and compute block-level damage parameters.
- * 3. Returns the resulting equivalent signal as an array of `EqSignalRow`.
+ * 3. Returns the resulting equivalent signal as an array of `EquivalentSignalRow`.
  *
  * @param rfList - An array of Float64Arrays, each containing pairs of peak and valley values.
  * @param repetitions - An array of repetition counts corresponding to each signal in `rfList`.
  * @param blocksNumber - The desired number of blocks in the equivalent signal.
  * @param minNumOfCycles - The minimum total number of cycles required in the equivalent signal.
  * @param slope - The fatigue slope (exponent) used for the damage calculation.
- * @returns An array of `EqSignalRow` representing the final equivalent damage signal.
+ * @returns An array of `EquivalentSignalRow` representing the final equivalent damage signal.
  */
 export function eqDmgSignal(
   rfList: Float64Array[], repetitions: number[],blocksNumber: number, minNumOfCycles: number, slope: number
-): EqSignalRow[] {
+): EquivalentSignalRow[] {
   // Convert (peak,valley) arrays + repetitions into columnar data
   const columns = parseAllRainflowData(rfList, repetitions, slope);
 

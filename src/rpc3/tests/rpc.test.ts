@@ -133,8 +133,8 @@ describe('Eq. damage signal', () => {
       expect(Math.abs(dmg-eq_sig_dmg)).toBeLessThan(dmg*0.001);
 
       // DEBUG
-      // console.log(eq_sig.map(i=> i.map(j => Math.round(j))))
-      // console.log(i.damage(5).toExponential(3))
+      console.log(eq_sig.map(i=> i.map(j => Math.round(j))))
+      console.log(i.damage(5).toExponential(3))
     });
   });
 });

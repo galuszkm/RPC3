@@ -62,11 +62,15 @@ export class Channel {
     return calcDamage(slope, this.range_counts)
   }
 
-  scaleValue(scalar: number) {
+  scaleValue(scalar: number): void {
     this._scale *= scalar
     for (let i = 0; i < this.value.length; i++) {
       this.value[i] *= scalar;
     }
+  }
+
+  setRainflowCycles(cycles: Float64Array): void {
+    this.rf.cycles = cycles;
   }
 
   get hash() {
