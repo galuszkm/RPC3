@@ -1,9 +1,9 @@
 import { useChannels } from "../context/ChannelsContext";
 import ReactECharts from "echarts-for-react";
 import { useEffect, useRef } from "react";
-import { fixedOptions } from "./chartOptions";
+import { fixedOptions } from "./TimeChartOptions";
 import { Channel } from "../rpc3";
-import "./Chart.css";
+import "./TimeChart.css";
 
 const generateData = (c: Channel) => {
   const len = c.value.length;
@@ -15,7 +15,7 @@ const generateData = (c: Channel) => {
   return data;
 };
 
-export default function Chart() {
+export default function TimeChart() {
   const { channels } = useChannels();
   const chartRef = useRef<ReactECharts | null>(null);
 
@@ -83,10 +83,10 @@ export default function Chart() {
   }, [channels]); // Re-run when channels change
 
   return (
-    <ReactECharts 
+    <ReactECharts
       ref={chartRef} 
       option={fixedOptions} 
-      className="echarts-container" 
+      className="time-chart-container" 
     />
   )
 }

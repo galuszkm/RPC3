@@ -39,6 +39,14 @@ const tooltipFormatter = (params: any) => {
 
 export const fixedOptions = {
     title: {},
+    legend: {
+      show: true,
+      orient: "horizontal",
+      left: 20,
+      top: 0,
+      itemGap: 20,
+      formatter: (name: string) => (name.length > 33 ? name.substring(0, 30) + "..." : name),
+    },
     toolbox: {
       feature: {
         dataZoom: { yAxisIndex: false },

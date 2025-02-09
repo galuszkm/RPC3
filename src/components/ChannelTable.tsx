@@ -174,7 +174,7 @@ const ChannelTable: React.FC = () => {
       {/* File Name Column with Filter */}
       <Column
         field="fileName"
-        header="File name"
+        header="Event name"
         sortable 
         filter 
         filterPlaceholder="Search by file" 
