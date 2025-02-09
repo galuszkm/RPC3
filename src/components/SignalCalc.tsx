@@ -5,6 +5,7 @@ import { Toast } from 'primereact/toast';
 import { Button } from "primereact/button";
 import { SelectButton } from "primereact/selectbutton";
 import { Tooltip } from 'primereact/tooltip';
+import { TabView, TabPanel } from 'primereact/tabview';
 import CumulativeChart from "./CumulativeChart";
 import { Channel, cumulative_rainflow_data, EventType, combine_channels_range_counts, calcDamage } from "../rpc3";
 import "./SignalCalc.css";
@@ -18,6 +19,7 @@ interface SignalCalcProps {
 export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   // Local states
   const toast = useRef<Toast>(null);
+  const [activeIndex, setActiveIndex] = useState<number>(0);
   const [events, setEvents] = useState<EventType[]>([]);
   const [slope, setSlope] = useState(5);
   const [gate, setGate] = useState(5);
@@ -207,11 +209,11 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
           onChange={(event) => setGate(Number(event.target.value) > 20 ? 20 : Number(event.target.value))}
         />
         <span className="tip">
-          Ignore load range threshold
+          Skip cycles with lower force range
         </span>
       </div>
     </div>
-  )
+  );
 
   const renderDamageTable = () => (
     <table className="utils-table">
@@ -230,7 +232,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         ))}
       </tbody>
     </table>
-  )
+  );
 
   const renderButtons = () => (
     <div className="controls-box">
@@ -254,7 +256,37 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
       </div>
       <Button className="cbutton calculate" label="Calculate" onClick={handleCalculate} />
     </div>
-  )
+  );
+
+  const renderTab = () => {
+    const rangeUnits = [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", ")
+    return (
+      <div className="chart">
+        <TabView activeIndex={activeIndex} onTabChange={(e) => setActiveIndex(e.index)}>
+          <TabPanel className="tab-panel" header="Cumulative Cycles">
+            <CumulativeChart 
+              x={ncum} 
+              y={range} 
+              name={name} 
+              xTypeLog={true}
+              xLabel="Cumulative cycles [-]" 
+              yLabel={`Range ${rangeUnits}`}
+             />
+          </TabPanel>
+          <TabPanel className="tab-panel" header="Percentage of total damage">
+            <CumulativeChart 
+              x={dcum} 
+              y={range} 
+              name={name} 
+              xTypeLog={false}
+              xLabel="Percentage of total damage [%]" 
+              yLabel={`Range ${rangeUnits}`}
+             />
+          </TabPanel>
+        </TabView>
+      </div>
+    )
+  }
 
   const headerElement = (
     <div className="signal-calc-header">
@@ -272,9 +304,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     >
       <Toast ref={toast} />
       <div className="signal-calc-grid">
-        <div className="chart">
-          <CumulativeChart x={ncum} y={range} name={name} xTypeLog={true} />
-        </div>
+        {renderTab()}
         <div className="utils">
           {renderControls()}
           {renderEventTable()}

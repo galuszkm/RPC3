@@ -8,6 +8,17 @@
     flex-grow: 1;
 }
 
+.App-grid .p-splitter-gutter-handle {
+    width: 10rem
+}
+.App-grid .p-splitter-gutter-handle:hover {
+    background-color: transparent;
+}
+
+.App-grid .p-splitter-gutter:hover {
+    background-color: rgba(27,135, 228, 0.4);
+}
+
 .App-grid-utils-box {
     width: 22.5vw;
     padding: 1rem;

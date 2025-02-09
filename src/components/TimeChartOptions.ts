@@ -48,12 +48,14 @@ export const fixedOptions = {
       formatter: (name: string) => (name.length > 33 ? name.substring(0, 30) + "..." : name),
     },
     toolbox: {
+      right: 20,
       feature: {
         dataZoom: { yAxisIndex: false },
-        saveAsImage: { pixelRatio: 2 }
+        saveAsImage: { pixelRatio: 2 },
       }
     },
     tooltip: {
+      show: false,
       trigger: "axis",
       axisPointer: { type: "line" },
       formatter: tooltipFormatter,

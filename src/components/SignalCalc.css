@@ -12,6 +12,20 @@
 
 .signal-calc-grid > .chart {
     flex-grow: 1;
+    display: flex;
+    height: 100%;
+}
+.signal-calc-grid > .chart .p-tabview{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.signal-calc-grid > .chart .p-tabview-panels{
+    height: 100%;
+    padding-bottom: 0;
+}
+
+.signal-calc-grid > .chart .tab-panel {
     height: 100%;
 }
 

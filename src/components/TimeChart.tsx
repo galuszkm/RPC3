@@ -1,8 +1,10 @@
+import { useEffect, useRef, useState } from "react";
 import { useChannels } from "../context/ChannelsContext";
 import ReactECharts from "echarts-for-react";
-import { useEffect, useRef } from "react";
 import { fixedOptions } from "./TimeChartOptions";
 import { Channel } from "../rpc3";
+import TooltipIcon from "../icons/TooltipIcon";
+import { Tooltip } from "primereact/tooltip";
 import "./TimeChart.css";
 
 const generateData = (c: Channel) => {
@@ -15,9 +17,18 @@ const generateData = (c: Channel) => {
   return data;
 };
 
-export default function TimeChart() {
-  const { channels } = useChannels();
+interface TimeChartProps {
+  resizeTrigger: number;
+}
+
+export default function TimeChart({ resizeTrigger }: TimeChartProps) {
+  // Local states and refs
   const chartRef = useRef<ReactECharts | null>(null);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const [pointerActive, setPointerActive] = useState(false);
+
+  // Get channels from context
+  const { channels } = useChannels();
 
   // Bind double click event handler to chart ref
   useEffect(() => {
@@ -33,6 +44,7 @@ export default function TimeChart() {
     // Bind double click handler to event
     if (chartRef.current) {
       chartInstance = chartRef.current.getEchartsInstance();
+      window.addEventListener('resize', resizeChart)
       // Listen for 'dblclick' on the chart
       if (chartInstance.getZr()){
         chartInstance.getZr().on("dblclick", handleDoubleClick);
@@ -40,8 +52,11 @@ export default function TimeChart() {
     }
     // Cleanup listener on unmount
     return () => {
-      if (chartInstance && chartInstance.getZr()) {
-        chartInstance.getZr().off("dblclick", handleDoubleClick);
+      if (chartInstance){
+        window.removeEventListener('resize', resizeChart)
+        if (chartInstance.getZr()){
+          chartInstance.getZr().off("dblclick", handleDoubleClick);
+        }
       }
     };
   }, []);
@@ -71,7 +86,11 @@ export default function TimeChart() {
           series: seriesData, 
           yAxis: { 
             ...fixedOptions.yAxis, 
-            name: [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", ") ,
+            name: [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", "),
+          },
+          tooltip: {
+            ...fixedOptions.tooltip,
+            show: pointerActive,
           }
         },
         {
@@ -82,11 +101,55 @@ export default function TimeChart() {
     }
   }, [channels]); // Re-run when channels change
 
+  // Active tooltip
+  useEffect(() => {
+    if (chartRef.current) {
+      // Get chart instance
+      const chartInstance = chartRef.current.getEchartsInstance();
+      // Update Chart
+      chartInstance.setOption(
+        {
+          tooltip: {
+            ...fixedOptions.tooltip,
+            show: pointerActive,
+          }
+        }
+      )
+    }
+  }, [pointerActive])
+
+  // **Resize Chart When Splitter Resizing Ends**
+  useEffect(() => {
+    resizeChart()
+  }, [resizeTrigger]);
+
+  function resizeChart(){
+    if (chartRef.current && wrapperRef.current) {
+      const chartInstance = chartRef.current.getEchartsInstance();
+      const wrapperHeight = wrapperRef.current.getBoundingClientRect().height;
+      chartInstance.resize({height: wrapperHeight});
+    }
+  }
+
   return (
-    <ReactECharts
-      ref={chartRef} 
-      option={fixedOptions} 
-      className="time-chart-container" 
-    />
+    <div className="time-chart-wrapper" ref={wrapperRef}>
+      <Tooltip 
+        target=".extra-toolbox-button-icon"
+        className="extra-toolbox-button-tooltip"
+        content="Toggle Pointer" 
+        position="bottom" 
+      />
+      <TooltipIcon 
+        width="17" 
+        height="17" 
+        className={"extra-toolbox-button-icon" + (pointerActive ? ' active': "")}
+        onClick={() => setPointerActive(prev => !prev)}
+      />
+      <ReactECharts
+        ref={chartRef} 
+        option={fixedOptions} 
+        className="time-chart-container" 
+      />
+    </div>
   )
 }

@@ -1,7 +1,7 @@
 import ReactECharts from "echarts-for-react";
 import { useEffect, useRef } from "react";
 import { fixedOptions } from "./CumulativeChartOptions";
-import "./TimeChart.css";
+import "./CumulativeChart.css";
 
 const generateData = (x: Float64Array, y: Float64Array) => {
   const len = x.length;
@@ -73,6 +73,7 @@ export default function CumulativeChart({
           large: true,
           sampling: "lttb",
           silent: true,
+          areaStyle: { opacity: 0.15 },
           lineStyle: { width: 3 },
         });
       }
@@ -104,7 +105,7 @@ export default function CumulativeChart({
     <ReactECharts
       ref={chartRef}
       option={fixedOptions}
-      className="time-chart-container"
+      className="cumulative-chart-container"
     />
   )
 }

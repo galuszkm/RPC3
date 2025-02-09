@@ -11,7 +11,8 @@ export const fixedOptions = {
     toolbox: {
       feature: {
         dataZoom: { yAxisIndex: false },
-        saveAsImage: { pixelRatio: 2 }
+        saveAsImage: { pixelRatio: 2 },
+        dataView: { show: true },
       }
     },
     tooltip: {
@@ -59,6 +60,7 @@ export const fixedOptions = {
         fontSize: 13,
         fontFamily: "Inter var, sans-serif",
         color: "#555",
+        formatter: (value: number) => value.toFixed(0), // Format X-axis labels
       },
     },
     yAxis: {

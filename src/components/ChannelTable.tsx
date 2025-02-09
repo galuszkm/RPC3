@@ -70,8 +70,7 @@ const ChannelTable: React.FC = () => {
     setGlobalFilterValue(value);
   };
 
-  const handleSelectionChange = (e: DataTableSelectionMultipleChangeEvent<ChannelType[]>) => {
-    let selected = e.value as ChannelType[];
+  const setChannelsHelper = (selected: ChannelType[]) => {
     // Ensure that all selected channels belong to existing files
     // Bug occured when file was removed but its selected channel was still in e.value 
     const validHash = files.map(f => f.hash)
@@ -79,6 +78,10 @@ const ChannelTable: React.FC = () => {
     // Set new selected channels to state and context
     setSelectedChannels(selected);
     setChannels(selected.map(i => i.channelRef));
+  }
+
+  const handleSelectionChange = (e: DataTableSelectionMultipleChangeEvent<ChannelType[]>) => {
+    setChannelsHelper(e.value as ChannelType[]);
   }
 
   const handleRowClick = (e: DataTableRowClickEvent) => {
@@ -93,9 +96,7 @@ const ChannelTable: React.FC = () => {
         // If not selected, add to selection
         selected.push(rowData);
     }
-    // Update selected channels in state and context
-    setSelectedChannels(selected);
-    setChannels(selected.map(i => i.channelRef));
+    setChannelsHelper(selected);
   };
 
   const clearSelection = () => {

@@ -57,6 +57,13 @@ export class Channel {
     return calcDamage(slope, this.range_counts)
   }
 
+  scaleValue(scalar: number) {
+    this._scale *= scalar
+    for (let i = 0; i < this.value.length; i++) {
+      this.value[i] *= scalar;
+    }
+  }
+
   get hash() {
     return this._hash
   }

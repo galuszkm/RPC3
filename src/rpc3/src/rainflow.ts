@@ -507,7 +507,7 @@ export function cumulative_rainflow_data(data: Float64Array, slope: number, gate
   const NcumRaw = new Float64Array(len + 1);
   const DcumRaw = new Float64Array(len + 1);
   NcumRaw[0] = 1;  // Start Ncum at 1
-  DcumRaw[0] = 100; // Start Dcum at 100
+  DcumRaw[0] = 0; // Start Dcum at 0
   let cycleAcc = 0;
   let dmgAcc = 0;
 

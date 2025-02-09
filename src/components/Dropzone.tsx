@@ -9,7 +9,7 @@ import { useChannels } from '../context/ChannelsContext';
 import DownloadExampleButton from './DownloadExampleButton';
 import "./Dropzone.css";
 
-const handleFileReading = (f: File): Promise<RPC> => {
+const file2rpc = (f: File): Promise<RPC> => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
     fileReader.readAsArrayBuffer(f);
@@ -66,27 +66,30 @@ export default function Dropzone() {
     let droppedFiles: File[] = Array.from(e.dataTransfer?.files || []);
 
     // Read all dragged files
-    await Promise.all(
-      droppedFiles.map(async (file) => {
-        try {
-          const rpc = await handleFileReading(file);
-          addFile(rpc); // Dispatch ADD_FILE to context
-        } catch (error) {
-          toast.current?.show({
-            severity: 'error', 
-            summary: 'Error', 
-            detail: `Failed to process file: ${file.name}`,
-          });
-        }
-      }
-    ));
+    await Promise.all(droppedFiles.map(async (file) => handleFileReading(file)));
+
     // Disable loading
     setIsLoading(false)
   };
 
+  const handleFileReading = async (file: File) => {
+    try {
+      const rpc = await file2rpc(file);
+      addFile(rpc); // Dispatch ADD_FILE to context
+      return rpc
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error', 
+        summary: 'Error', 
+        detail: `Failed to process file: ${file.name}`,
+      });
+    }
+    return null
+  }
+
   const handleFileRemove = (hash: string) => {
-    removeFile(hash)
-    removeFileChannels(hash)
+    removeFile(hash);
+    removeFileChannels(hash);
   };
 
   // ============================================================
@@ -163,7 +166,7 @@ export default function Dropzone() {
       <Toast ref={toast} />
       <div className='dropzone-header'>
         <div className='dropzone-title'>Loaded files</div>
-        <DownloadExampleButton />
+        <DownloadExampleButton handleFileReading={handleFileReading} toast={toast} />
       </div>
       {renderDropbox()}
     </div>
