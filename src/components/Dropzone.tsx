@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { Toast } from 'primereact/toast';
 import { Button } from 'primereact/button';
 import { Tag } from 'primereact/tag';
@@ -6,9 +6,10 @@ import { RPC } from '../rpc3';
 import { Buffer } from 'buffer';
 import { useFiles } from "../context/FilesContext"; 
 import { useChannels } from '../context/ChannelsContext';
+import DownloadExampleButton from './DownloadExampleButton';
 import "./Dropzone.css";
 
-const handleFileReading = (f: File): Promise<RPC> => {
+const file2rpc = (f: File): Promise<RPC> => {
   return new Promise((resolve, reject) => {
     const fileReader = new FileReader();
     fileReader.readAsArrayBuffer(f);
@@ -39,6 +40,8 @@ const handleFileReading = (f: File): Promise<RPC> => {
 export default function Dropzone() {
   // Local states and refs
   const toast = useRef<Toast>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Use context to manage the files upload
   const { files, addFile, removeFile } = useFiles(); 
@@ -47,30 +50,46 @@ export default function Dropzone() {
   // ============================================================
   // MIDDLEWARES
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
   const handleFileDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault(); // Prevent default browser behavior (e.g., opening the file)
+    setIsDragging(false);
+    setIsLoading(true);
     let droppedFiles: File[] = Array.from(e.dataTransfer?.files || []);
 
     // Read all dragged files
-    await Promise.all(
-      droppedFiles.map(async (file) => {
-        try {
-          const rpc = await handleFileReading(file);
-          addFile(rpc); // Dispatch ADD_FILE to context
-        } catch (error) {
-          toast.current?.show({
-            severity: 'error', 
-            summary: 'Error', 
-            detail: `Failed to process file: ${file.name}`,
-          });
-        }
-      }
-    ));
+    await Promise.all(droppedFiles.map(async (file) => handleFileReading(file)));
+
+    // Disable loading
+    setIsLoading(false)
   };
 
+  const handleFileReading = async (file: File) => {
+    try {
+      const rpc = await file2rpc(file);
+      addFile(rpc); // Dispatch ADD_FILE to context
+      return rpc
+    } catch (error) {
+      toast.current?.show({
+        severity: 'error', 
+        summary: 'Error', 
+        detail: `Failed to process file: ${file.name}`,
+      });
+    }
+    return null
+  }
+
   const handleFileRemove = (hash: string) => {
-    removeFile(hash)
-    removeFileChannels(hash)
+    removeFile(hash);
+    removeFileChannels(hash);
   };
 
   // ============================================================
@@ -95,9 +114,9 @@ export default function Dropzone() {
     );
   };
 
-  const renderEmptyDropbox = () => {
+  const renderDropboxInfoMark = () => {
     return (
-      <div className='dropzone-box-empty'>
+      <div className='dropzone-box-empty' style={{opacity: Math.max(1-0.2*files.length, 0)}}>
         <i 
           className="pi pi-download mt-3 p-5" 
           style={{fontSize: '5em', borderRadius: '50%', color: '#cbcdd0'}}
@@ -109,20 +128,46 @@ export default function Dropzone() {
     );
   };
 
+  // Render loading spinner or file list
+  const renderDropboxContent = () => {
+    if (isLoading){
+      return (
+        <div className="overlay" style={{background: 'none'}}>
+          <div className="loading-box">
+            <div className="spinner" />
+          </div>
+          <span style={{ fontSize: '1.3rem', color: 'var(--text-color-secondary)' }}>
+            Loading data ...
+          </span>
+        </div>
+      )
+    }
+    return (
+      <>
+        {files.map((i, idx) => renderFileRow(i, idx))}
+        {renderDropboxInfoMark()}
+      </>
+    )
+  }
+
   const renderDropbox = () => (
     <div 
-        className="flex align-items-center flex-column dropzone-box"
+        className={`lex align-items-center flex-column dropzone-box ${isDragging ? "dragover" : ""}`}
         onDrop={handleFileDrop}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
      >
-      {files.length ? files.map((i, idx) => renderFileRow(i, idx)) : renderEmptyDropbox()}
+      {renderDropboxContent()}
      </div>
   )
 
   return (
     <div className='dropzone-root'>
       <Toast ref={toast} />
-      <div className='dropzone-title'>Loaded files</div>
+      <div className='dropzone-header'>
+        <div className='dropzone-title'>Loaded files</div>
+        <DownloadExampleButton handleFileReading={handleFileReading} toast={toast} />
+      </div>
       {renderDropbox()}
     </div>
   );

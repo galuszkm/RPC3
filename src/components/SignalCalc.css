@@ -1,0 +1,262 @@
+.signal-calc-dialog {
+    width: 90vw;
+    height: 90vh;
+}
+
+.signal-calc-grid {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+    height: 100%;
+}
+
+.signal-calc-grid > .chart {
+    flex-grow: 1;
+    display: flex;
+    height: 100%;
+}
+
+/* CHART TAB PANELS */
+
+.signal-calc-grid > .chart .p-tabview {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-height: 76vh;
+}
+.signal-calc-grid > .chart .p-tabview-panels{
+    height: 100%;
+    padding-bottom: 0;
+}
+
+.signal-calc-grid > .chart .tab-panel {
+    height: 100%;
+}
+
+/* ======================================================= */
+/* UTILS BOX */
+
+.signal-calc-grid > .utils {
+    width: 32rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    height: auto;
+}
+
+.signal-calc-grid > .utils .cbutton {
+    margin: 0;
+}
+
+/* CHART TAB PANELS */
+
+.signal-calc-grid > .utils .p-tabview{
+    width: 100%;
+}
+.signal-calc-grid > .utils .p-tabview-panels{
+    padding: 0;
+    padding-top: 1.5rem;
+    padding-right: 0.7rem;
+}
+.signal-calc-grid > .utils .tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex-grow: 1;
+}
+
+/* OTHER UTILS COMPONENTS */
+
+.signal-calc-grid > .utils .controls-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    width: 100%;
+}
+.signal-calc-grid > .utils .controls-box:last-of-type {
+    flex-grow: 1;
+    justify-content: end;
+}
+
+.signal-calc-grid > .utils .input-block {
+    display: flex;
+    flex-direction: row;
+    gap: 0.8rem;
+    padding-bottom: 1rem;
+    align-items: center;
+    width: 100%;
+}
+.signal-calc-grid > .utils .input-block > label {
+    width: 6.5rem;
+    min-width: 6.5rem;
+}
+.signal-calc-grid > .utils .input-block > input {
+    padding: 6px;
+    padding-left: 10px;
+    border: 1px solid var(--surface-d);
+    border-radius: 4px;
+    outline: none;
+    font-family: "Inter var", sans-serif;
+    width: 6.5rem;
+}
+.signal-calc-grid > .utils .input-block > .tip {
+    font-size: 12.5px;
+    color: rgb(130, 130, 130);
+    text-align: right;
+    justify-self: flex-end;
+    flex-grow: 1;
+    /* max-width: 15.5rem; */
+}
+
+.signal-calc-grid > .utils  hr {
+    margin-block-end: 1rem;
+    margin-block-start: 1rem;
+    border: none;
+    border-bottom: 2px solid rgb(235,235,235);
+}
+
+/* COMBINE EVENTS BUTTON */
+.signal-calc-grid > .utils .combine-events {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.signal-calc-grid > .utils .combine-events-button .p-button{
+    padding: 5px 14px 5px 14px;
+    height: 2.4rem;
+}
+.signal-calc-grid > .utils .combine-events-button .p-button.p-highlight {
+    background-color: rgb(113, 162, 236);
+    border-color: rgb(116, 166, 241);
+}
+.signal-calc-grid > .utils .combine-events-button .p-button:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+.signal-calc-grid > .utils .combine-events > .title {
+    font-weight: bold;
+    margin-left: 1rem;
+    font-size: 14px;
+}
+
+/* CALCULATE BUTTON*/
+.signal-calc-grid > .utils .calculate {
+    width: 100%;
+}
+
+/* ======================================================= */
+/* UTILS TABLE */
+
+.signal-calc-dialog .utils-table-root {
+    max-height: 20rem;
+    overflow-y: auto;
+    margin-bottom: 0.5rem;
+}
+
+.signal-calc-dialog table.utils-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Inter var", sans-serif;
+    font-size: 13px;
+    border: 1px solid var(--surface-d);
+}
+
+.signal-calc-dialog table.utils-table th {
+    background-color: var(--surface-b);
+    /* Uses PrimeReact theme color */
+    color: var(--text-color);
+    text-align: left;
+    padding: 8px;
+    font-weight: bold;
+    border-bottom: 2px solid var(--surface-d);
+}
+
+.signal-calc-dialog table.utils-table td {
+    padding: 8px;
+    border-bottom: 1px solid var(--surface-d);
+}
+.signal-calc-dialog table.utils-table td:first-child{
+    word-break: break-all;
+    padding-left: 10px;
+    padding-right: 10px;
+}
+.signal-calc-dialog table.utils-table td:last-child{
+    width: 8rem;
+}
+
+.signal-calc-dialog table.utils-table tr:hover {
+    background-color: var(--surface-c);
+}
+
+.signal-calc-dialog table.utils-table input {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid var(--surface-d);
+    border-radius: 4px;
+    outline: none;
+    font-family: "Inter var", sans-serif;
+}
+
+.signal-calc-dialog table.utils-table input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 5px var(--primary-color);
+}
+
+/* ======================================================= */
+/* EQUIVALENT SIGNAL TABLE */
+
+.signal-calc-grid > .chart .tab-panel.eq-signals{
+    margin-left: -1rem;
+    margin-right: -1rem;
+}
+
+.eq-signal-root {
+    width: 100%;
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+.eq-signal-item {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 2.5rem;
+}
+
+.eq-signal-item .eq-signal-table-title {
+    margin-bottom: 0.3rem;
+}
+.eq-signal-item .eq-signal-table-title > span:not(:last-child) {
+    margin-right: 1.5rem;
+}
+.eq-signal-item .eq-signal-table-title > span > b {
+    margin-right: 0.5rem;
+}
+
+.signal-calc-dialog table.eq-signal-table {
+    max-width: 85%;
+    border: 1px solid rgb(222, 222, 222);
+}
+.signal-calc-dialog table.eq-signal-table tr:last-child > td {
+    border-bottom: 1px solid rgb(222, 222, 222);
+}
+
+.signal-calc-dialog table.eq-signal-table th {
+    text-align: center ;
+}
+.signal-calc-dialog table.eq-signal-table th.id {
+    width: 7rem
+}
+.signal-calc-dialog table.eq-signal-table th.percDmg {
+    width: 12rem;
+}
+.signal-calc-dialog table.eq-signal-table td {
+    text-align: center;  
+}
+
+.signal-calc-dialog table.eq-signal-table th:not(:first-child),
+.signal-calc-dialog table.eq-signal-table td:not(:first-child){
+    border-left: 1px solid rgb(229, 231, 235);
+}

@@ -1,6 +1,6 @@
 .channel-table {
-    margin: 1rem;
     font-size: 14px;
+    width: 100%;
 }
 
 .channel-table .p-paginator span,
@@ -46,19 +46,22 @@
     font-size: 13px;
 }
 
+.channel-table tr {
+    cursor: pointer;
+}
 .channel-table tr:hover {
     background-color: rgba(222, 246, 255, 0.5);
 }
 
 .channel-table th {
-    padding-top: 6px;
-    padding-bottom: 6px;
+    padding-top: 4px;
+    padding-bottom: 4px;
     padding-right: 5px;
 }
 
 .channel-table td {
-    padding-top: 7px;
-    padding-bottom: 7px;
+    padding-top: 5px;
+    padding-bottom: 5px;
 }
 
 .p-column-filter-remove-button > span,

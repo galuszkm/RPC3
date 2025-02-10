@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { RPC } from '../src/rpc';
+import { RPC, eqDmgSignal } from '..'
 
 /**
  * Reads an RPC file, instantiates the RPC class, and parses it.
@@ -77,6 +77,64 @@ describe('RPC Writing Tests', () => {
     // Ensure channel values are identical
     rpc.Channels.forEach((chan, idx) => {
       expect(chan.value).toStrictEqual(newRpc.Channels[idx].value);
+    });
+  });
+});
+
+describe('Rainflow counting', () => {
+  const filePath = path.join(__dirname, 'data', 'SignalExample.rsp');
+
+  it('should perform rainflow counting of channel and calculate expected damage values without errors', () => {
+    const rpc = readSignal(filePath);
+
+    // Basic checks
+    expect(rpc.Errors.length).toBe(0);
+
+    const channels = rpc.Channels.slice(0, 3)
+    channels.forEach(i => i.rainflow(1, true))
+
+    // Damage calculations
+    const damage = channels.map(i => i.damage(5));
+
+    // Expected values
+    const expectedDamage = [
+      1.20005e+14,
+      1.28079e+08,
+      4.19604e+08
+    ];
+    expectedDamage.forEach((i, idx) => {
+      expect(damage[idx]-i).toBeLessThan(i/1000);
+    })
+    
+  });
+});
+
+describe('Eq. damage signal', () => {
+  const filePath = path.join(__dirname, 'data', 'SignalExample.rsp');
+
+  it('should calculate damage equivalent block signal without errors', () => {
+    const rpc = readSignal(filePath);
+    const repeat = 10000;
+    const slope = 5;
+    const minCycles = 100e3;
+    const blockNo = 5;
+
+    // Basic checks
+    expect(rpc.Errors.length).toBe(0);
+
+    const channels = rpc.Channels.slice(0, 2)
+    channels.forEach((i, idx) => {
+      // Rainflow of channel
+      i.rainflow(repeat, true);
+      // Eq block signal
+      const eq_sig = eqDmgSignal([i.cycles], [repeat], blockNo, minCycles, slope)
+      const dmg = i.damage(slope);
+      const eq_sig_dmg = eq_sig.reduce((acc, i) => acc + i[4], 0)
+      expect(Math.abs(dmg-eq_sig_dmg)).toBeLessThan(dmg*0.001);
+
+      // DEBUG
+      console.log(eq_sig.map(i=> i.map(j => Math.round(j))))
+      console.log(i.damage(5).toExponential(3))
     });
   });
 });

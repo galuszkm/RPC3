@@ -1,25 +1,30 @@
 // channel.ts
-import { arrayMax, arrayMin } from './utils';
-import { findReversals, findRainflowCycles, concatenateReversals } from './rainflow';
+import { findMinMax, generateHash, calcDamage } from './utils';
+import { rainflow_counting, count_range_cycles } from './rainflow';
+
+const rf_init = () => ({
+  reversals: new Float64Array(0),
+  revIdx: new Int32Array(0),
+  cycles: new Float64Array(0),
+  residuals: new Float64Array(0),
+  range_counts: new Float64Array(0),
+})
 
 export class Channel {
-  public value: number[] = [];
+  public value: Float64Array = new Float64Array(0);
   public min: number = 1e30;
   public max: number = -1e30;
-  public isSelected = false;
+  private _hash:string = "";
+  public repetitions: number = 0;
 
   // Rainflow data
-  public rf = {
-    reversals: [] as number[],
-    revIdx: [] as number[],
-    cycles: [] as number[][],
-    range: [] as number[],
-    mean: [] as number[],
+  private rf: {
+    reversals: Float64Array;
+    revIdx: Int32Array;
+    cycles: Float64Array;
+    residuals: Float64Array;
+    range_counts: Float64Array;
   };
-
-  // Summarized
-  public Range: number[] = [];
-  public Cycles: number[] = [];
 
   constructor(
     public Number: number,
@@ -29,44 +34,47 @@ export class Channel {
     private _dt: number,
     public filename?: string,
     public fileHash?: string,
-  ) {}
-
-  setMinMax(): void {
-    this.max = arrayMax(this.value);
-    this.min = arrayMin(this.value);
+  ) {
+    this.rf = rf_init();
+    //  Set hash
+    this._hash = generateHash(Number + Name + filename) + fileHash;
   }
 
-  rainflow(k = 256, repeats = 1): void {
-    const [reversals, revIdx] = findReversals(this.value, k);
-    let [cycles, residue] = findRainflowCycles(reversals);
+  setMinMax(): void {
+    const {min, max} = findMinMax(this.value);
+    this.max = max
+    this.min = min
+  }
 
-    // Multiply closed cycles by repetitions
-    cycles = cycles.flatMap(e => Array.from({ length: repeats }, () => e));
-
-    // Close residuals
-    const closed_residuals = concatenateReversals(residue, residue);
-    let [cycles_residue] = findRainflowCycles(closed_residuals);
-    cycles_residue = cycles_residue.flatMap(e => Array.from({ length: repeats }, () => e));
-
-    // Combine
-    cycles = cycles.concat(cycles_residue);
-
-    // Store results
-    this.rf.reversals = reversals;
-    this.rf.revIdx = revIdx;
-    this.rf.cycles = cycles;
-    this.rf.range = cycles.map(([start, end]) => Math.abs(end - start));
-    this.rf.mean = cycles.map(([start, end]) => (start + end) / 2);
-
-    // Summaries
-    this.Range = Array.from(new Set(this.rf.range)).sort((a, b) => a - b);
-    this.Cycles = this.Range.map(r => this.rf.range.filter(rr => rr === r).length);
+  rainflow(repets=1, close_residuals=true, k=2**12): void {
+    // Save repetitions
+    this.repetitions = repets;
+    // Perform rainflow counting
+    const { cycles, residuals } = rainflow_counting(this.value, close_residuals, k);
+    // Save cycles residuals
+    this.rf.cycles = cycles
+    this.rf.residuals = residuals;
+    // Count unique cycles based on range
+    this.rf.range_counts = count_range_cycles(cycles, repets);
   }
 
   damage(slope: number): number {
-    return this.Range
-      .map((r, idx) => Math.pow(r, slope) * this.Cycles[idx])
-      .reduce((sum, v) => sum + v, 0);
+    return calcDamage(slope, this.range_counts)
+  }
+
+  scaleValue(scalar: number): void {
+    this._scale *= scalar
+    for (let i = 0; i < this.value.length; i++) {
+      this.value[i] *= scalar;
+    }
+  }
+
+  setRainflowCycles(cycles: Float64Array): void {
+    this.rf.cycles = cycles;
+  }
+
+  get hash() {
+    return this._hash
   }
 
   get scale() {
@@ -75,5 +83,22 @@ export class Channel {
 
   get dt() {
     return this._dt
+  }
+
+  get range_counts() {
+    return this.rf.range_counts
+  }
+
+  get residuals() {
+    return this.rf.residuals
+  }
+
+  get cycles() {
+    return this.rf.cycles
+  }
+
+  clearRF(): void{
+    this.rf = rf_init();
+    this.repetitions = 0;
   }
 }
