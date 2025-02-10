@@ -55,12 +55,15 @@
     justify-content: flex-start;
     padding: 0.5rem 0.25rem 0.5rem 0.25rem;
     border-bottom: 1px solid rgb(230,230,230);
+    background-color: transparent;
 }
 
 .dropzone-file-row .title {
     flex-grow: 1;
     text-align: start;
     word-break: break-all;
+    background-color: transparent;
+    z-index: 3;
 }
 
 .dropzone-file-row .title > span {
@@ -81,6 +84,7 @@
     margin-left: 1rem;
     width: 2rem;
     height: 2rem;
+    z-index: 5;
 }
 
 /* ========================================================= */

@@ -4,6 +4,7 @@ import 'primeicons/primeicons.css';
 import { useState, lazy, Suspense, useRef } from 'react';
 import { FilesProvider } from "./context/FilesContext";
 import { ChannelsProvider, useChannels } from './context/ChannelsContext';
+import Dropzone from './components/Dropzone';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Button } from 'primereact/button';
 import { Toast } from 'primereact/toast';
@@ -12,7 +13,6 @@ import "./App.css";
 const TimeChart = lazy(() => import("./components/TimeChart"));
 const SignalCalc = lazy(() => import("./components/SignalCalc"));
 const ChannelTable = lazy(() => import("./components/ChannelTable"));
-const Dropzone = lazy(() => import("./components/Dropzone"));
 
 const renderSplitter = () => {
   const [resizeTrigger, setResizeTrigger] = useState(0);
@@ -57,23 +57,23 @@ function renderRightColumn(toast: React.RefObject<Toast | null>) {
   }
 
   return (
-    <Suspense fallback={<></>}>
-      <div className='App-grid-utils-box'>
-        <div className='App-dropzone'>
-            <Dropzone />
-        </div>
-        <div className='App-utils'>
-          <Button 
-            className='cbutton'
-            style={{width: '100%'}}
-            label="Calculate damage and equivalent block signal" 
-            icon="pi pi-wrench" 
-            onClick={handleOpenSignalCalc}
-          />
-        </div>
-        <SignalCalc open={signalCalcOpen} setOpen={setSignalCalcOpen}/>
+    <div className='App-grid-utils-box'>
+      <div className='App-dropzone'>
+          <Dropzone />
       </div>
-    </Suspense>
+      <div className='App-utils'>
+        <Button 
+          className='cbutton'
+          style={{width: '100%'}}
+          label="Calculate damage and equivalent block signal" 
+          icon="pi pi-wrench" 
+          onClick={handleOpenSignalCalc}
+        />
+      </div>
+      <Suspense fallback={<></>}>
+        <SignalCalc open={signalCalcOpen} setOpen={setSignalCalcOpen}/>
+      </Suspense>
+    </div>
   )
 }
 

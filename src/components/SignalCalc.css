@@ -32,6 +32,12 @@
 .signal-calc-grid > .chart .tab-panel {
     height: 100%;
 }
+.signal-calc-grid > .p-tabview .p-tabview-nav li .p-tabview-nav-link {
+    color: #6b7280;
+}
+.signal-calc-grid > .p-tabview .p-tabview-nav li.p-highlight .p-tabview-nav-link {
+    color: #6366f1;
+}
 
 /* ======================================================= */
 /* UTILS BOX */
