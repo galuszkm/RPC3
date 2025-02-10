@@ -36,10 +36,14 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    padding-top: 7px;
+    padding-bottom: 7px;
 }
 
 .channel-table-header > .title {
     flex-grow: 1;
+    font-size: 1.08rem;
+    margin: 0;
 }
 
 .channel-table-header .filter-global {

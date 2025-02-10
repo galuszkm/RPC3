@@ -2,6 +2,15 @@ html {
     font-size: 14px;
 }
 
+body {
+    margin: 0;
+    background-color: white;
+}
+
+table {
+    font-size: 1rem;
+}
+
 .cbutton {
     margin-right: 0.5rem;
     background-color: rgb(113, 162, 236);

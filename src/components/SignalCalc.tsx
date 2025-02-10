@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, RefObject } from "react";
+import { useEffect, useState, useRef, RefObject, lazy, Suspense } from "react";
 import { useChannels } from "../context/ChannelsContext";
 import { Dialog } from "primereact/dialog";
 import { Toast } from 'primereact/toast';
@@ -6,13 +6,14 @@ import { Button } from "primereact/button";
 import { SelectButton } from "primereact/selectbutton";
 import { Tooltip } from 'primereact/tooltip';
 import { TabView, TabPanel } from 'primereact/tabview';
-import CumulativeChart from "./CumulativeChart";
 import { 
   Channel, EventType, calcDamage, eqDmgSignal,
   cumulative_rainflow_data, combine_channels_range_counts,
   EquivalentSignalRow, 
 } from "../rpc3";
 import "./SignalCalc.css";
+
+const CumulativeChart = lazy(() => import("./CumulativeChart"));
 
 interface SignalCalcProps {
   open: boolean;
@@ -220,6 +221,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     setNcum(__ncum__);
     setDcum(__dcum__);
     setDamage(__damage__);
+    lcX;lcY;
   }
 
   const handleClose = () => {
@@ -413,24 +415,28 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
       <div className="chart">
         <TabView activeIndex={activeIndexChart} onTabChange={(e) => setActiveIndexChart(e.index)}>
           <TabPanel className="tab-panel" header="Cumulative Cycles">
-            <CumulativeChart 
-              x={ncum} 
-              y={range} 
-              name={name} 
-              xTypeLog={true}
-              xLabel="Cumulative cycles [-]" 
-              yLabel={`Range ${rangeUnits}`}
-             />
+            <Suspense fallback={<></>}>
+              <CumulativeChart 
+                x={ncum} 
+                y={range} 
+                name={name} 
+                xTypeLog={true}
+                xLabel="Cumulative cycles [-]" 
+                yLabel={`Range ${rangeUnits}`}
+              />
+             </Suspense>
           </TabPanel>
           <TabPanel className="tab-panel" header="Percentage of total damage">
-            <CumulativeChart 
-              x={dcum} 
-              y={range} 
-              name={name} 
-              xTypeLog={false}
-              xLabel="Percentage of total damage [%]" 
-              yLabel={`Range ${rangeUnits}`}
-             />
+            <Suspense fallback={<></>}>
+              <CumulativeChart 
+                x={dcum} 
+                y={range} 
+                name={name} 
+                xTypeLog={false}
+                xLabel="Percentage of total damage [%]" 
+                yLabel={`Range ${rangeUnits}`}
+              />
+             </Suspense>
           </TabPanel>
           <TabPanel className="tab-panel eq-signals" header="Eq block signals">
             <div className="eq-signal-root">

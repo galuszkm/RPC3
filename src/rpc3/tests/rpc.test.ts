@@ -123,7 +123,7 @@ describe('Eq. damage signal', () => {
     expect(rpc.Errors.length).toBe(0);
 
     const channels = rpc.Channels.slice(0, 2)
-    channels.forEach((i, idx) => {
+    channels.forEach((i) => {
       // Rainflow of channel
       i.rainflow(repeat, true);
       // Eq block signal

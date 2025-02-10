@@ -27,7 +27,7 @@ const DownloadExampleButton: React.FC<DownloadExampleButtonProps> = ({ handleFil
   // File download handler
   const handleDownload = async () => {
     try {
-      const fileUrl = "/getExample"; // Proxy route to fetch the file
+      const fileUrl = window.location.href + "getExample"; // Proxy route to fetch the file
       const response = await fetch(fileUrl);
 
       // Check if response status is ok
