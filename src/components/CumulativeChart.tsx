@@ -65,7 +65,7 @@ export default function CumulativeChart({
       for (let i=0; i<x.length; i++) {
         seriesData.push({
           type: "line",
-          step: 'end',
+          step: 'start',
           name: name[i],
           dimensions: ["x", "y"],
           data: generateData(x[i], y[i]),
