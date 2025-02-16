@@ -53,6 +53,15 @@
 .signal-calc-grid > .utils .cbutton {
     margin: 0;
 }
+.signal-calc-grid > .utils .cbutton.paste-repets {
+    padding: 8px 14px 8px 14px !important;
+    width: 20rem;
+    margin-left: auto;
+    margin-bottom: -0.4rem;
+}
+.signal-calc-grid > .utils .cbutton.paste-repets > span {
+    font-weight: normal;
+}
 
 /* CHART TAB PANELS */
 
@@ -158,6 +167,7 @@
     max-height: 20rem;
     overflow-y: auto;
     margin-bottom: 0.5rem;
+    justify-items: end;
 }
 
 .signal-calc-dialog table.utils-table {

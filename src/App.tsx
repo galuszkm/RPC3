@@ -4,6 +4,7 @@ import 'primeicons/primeicons.css';
 import { useState, lazy, Suspense, useRef } from 'react';
 import { FilesProvider } from "./context/FilesContext";
 import { ChannelsProvider, useChannels } from './context/ChannelsContext';
+import { EventsProvider } from './context/EventContext';
 import Dropzone from './components/Dropzone';
 import { Splitter, SplitterPanel } from 'primereact/splitter';
 import { Button } from 'primereact/button';
@@ -93,9 +94,11 @@ function App() {
 export default function AppWrapper() {
   return (
     <FilesProvider>
-      <ChannelsProvider>
-        <App />
-      </ChannelsProvider>
+      <EventsProvider>
+        <ChannelsProvider>
+          <App />
+        </ChannelsProvider>
+      </EventsProvider>
     </FilesProvider>
   )
 }

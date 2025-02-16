@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, RefObject, lazy, Suspense } from "react";
 import { useChannels } from "../context/ChannelsContext";
+import { useEvents } from "../context/EventContext";
 import { Dialog } from "primereact/dialog";
 import { Toast } from 'primereact/toast';
 import { Button } from "primereact/button";
@@ -25,12 +26,12 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const toast = useRef<Toast>(null);
   const [activeIndexChart, setActiveIndexChart] = useState<number>(0);
   const [activeIndexUtils, setActiveIndexUtils] = useState<number>(0);
-  const [events, setEvents] = useState<EventType[]>([]);
   const [slope, setSlope] = useState(5);
   const [gate, setGate] = useState(5);
   const [blockNo, setBlockNo] = useState(5);
   const [minNoCycles, setMinNoCycles] = useState(250e3);
   const [combine, setCombine] = useState(false);
+  const [displayEvents, setDisplayEvents] = useState<EventType[]>([]);
   
   // Chart data
   const [name, setName] = useState<string[]>([]);
@@ -44,8 +45,9 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const [eqSignalUnits, setEqSignalUnits] = useState<string[]>([]);
   const [eqSignalNames, setEqSignalNames] = useState<string[]>([]);
 
-  // Get selected channels from context
+  // Get selected channels and events from context
   const { channels } = useChannels();
+  const { events, setEvent } = useEvents();
 
   // Update `events` only when `open` is true and `channels` change
   useEffect(() => {
@@ -57,14 +59,16 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
           uniqueEventsMap.set(hash, {
             name: String(channel.filename),
             hash,
-            repetitions: 1, // Default repetitions to 1
+            // Get repetitions from current events context
+            repetitions: events[hash]?.repetitions || 1, // Default repetitions to 1
           });
         }
       });
       // Convert Map to sorted array
-      setEvents(Array.from(uniqueEventsMap.values()).sort((a, b) => a.name.localeCompare(b.name)));
+      const evToDisplay = Array.from(uniqueEventsMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+      setDisplayEvents(evToDisplay);
     }
-  }, [open, channels]);
+  }, [open, channels, events]);
 
   // ============================================================
   // MIDDLEWARES
@@ -77,13 +81,58 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   }
 
   // Handle event repetitions change
-  const handleEventRepetitionsChange = (hash: string, value: number) => {
-    setEvents((prevEvents) =>
-      prevEvents.map((event) =>
-        event.hash === hash ? { ...event, repetitions: value || 1 } : event
-      )
-    );
+  const handleEventRepetitionsChange = (hash: string, name: string, value: number) => {
+    setEvent({
+      hash, 
+      name, 
+      repetitions: value || 1,
+    });
   };
+
+  const postErrorClipboard = (title: string, message:string) => {
+    toast.current?.show({
+      severity: 'error', 
+      summary: title, 
+      detail: message,
+      life: 3500,
+    });
+  }
+
+  const handleEventRepetitionsPaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText(); // Read clipboard text
+      if (!text) {
+        postErrorClipboard("Clipboard is empty", "No text data found in clipboard.");
+        return;
+      }
+      const validEventNames = new Set(Object.values(events).map(i => i.name)); // Use Set for faster lookup
+      const lines = text.split(/\r?\n/); // Split into lines
+      const reps = lines.map((line) => {
+        // Try different separators (tab, semicolon, colon, comma)
+        const parts = line.split(/[\t;:,]/).map((part) => part.trim());
+        if (parts.length >= 2) {
+          let [nameStr, repetitionsStr] = parts;
+          const name = nameStr.includes('.') ? nameStr.split('.')[0] : nameStr; // Handle dot separation
+          const repetitions = parseInt(repetitionsStr, 10);
+  
+          if (!isNaN(repetitions) && validEventNames.has(name)) {
+            return { name, repetitions };
+          }
+        }
+        return null;
+      }).filter(Boolean); // Remove invalid entries
+  
+      Object.values(events).forEach((e) => {
+        const r = reps.find((i) => i?.name === e.name);
+        if (r) {
+          setEvent({ ...e, repetitions: r.repetitions });
+        }
+      });
+    } catch (error) {
+      postErrorClipboard("Error reading clipboard", String(error));
+      console.error("Error reading clipboard:", error);
+    }
+  };  
 
   const groupChannelsByName = () => {
     return Object.entries(
@@ -97,10 +146,9 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     );
   }
 
-  const postErrorCalculations= (toast: RefObject<Toast | null>, title: string, chanName: string, evName?: string, error?: string) => {
+  const postErrorCalculations = (toast: RefObject<Toast | null>, title: string, chanName: string, evName?: string, error?: string) => {
     const messageElement = () => (
       <div className="toast-error-calculate">
-        <b className="title">{title}</b><br/>
         {error ? <span>{error}<br/></span>: <></>}
         <b>Channel: {chanName}</b><br/>
         {evName ? <b>Event: {evName}</b> : <></>}
@@ -108,7 +156,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     )
     toast.current?.show({
       severity: 'error', 
-      summary: 'Error', 
+      summary: title, 
       detail: messageElement(),
       life: 5000,
     });
@@ -132,7 +180,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
 
   const combineChannels = (name: string, channels: Channel[]): [string, Float64Array, number, Channel[]] => {
     // Combine channels to get combined range counts and residual cycles
-    const {rangeCounts, residualCycles} = combine_channels_range_counts(channels, events);
+    const {rangeCounts, residualCycles} = combine_channels_range_counts(channels, displayEvents);
     const dmg = calcDamage(slope, rangeCounts);
     
     // Create artifical channel for residuals and set its RF cycles
@@ -161,7 +209,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     channels.forEach(c => {
       try {
         c.clearRF();
-        c.rainflow(events.find(i => i.hash == c.fileHash)?.repetitions || 1, !combine)
+        c.rainflow(displayEvents.find(i => i.hash == c.fileHash)?.repetitions || 1, !combine)
       } catch (error) {
         console.error(error)
         postErrorCalculations(toast, 'Rainflow counting failed!', c.Name, c.filename);
@@ -243,7 +291,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
           </tr>
         </thead>
         <tbody>
-          {events.map((e) => (
+          {displayEvents.map((e) => (
             <tr key={e.hash}>
               <td>{e.name}</td>
               <td>
@@ -251,7 +299,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
                   type="number"
                   min={1}
                   value={e.repetitions}
-                  onChange={(event) => handleEventRepetitionsChange(e.hash, Number(event.target.value))}
+                  onChange={(event) => handleEventRepetitionsChange(e.hash, e.name, Number(event.target.value))}
                 />
               </td>
             </tr>
@@ -454,6 +502,12 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         <TabView activeIndex={activeIndexUtils} onTabChange={(e) => setActiveIndexUtils(e.index)}>
           <TabPanel className="tab-panel" header="Input data">
             {renderControls()}
+            <Button 
+              className="cbutton paste-repets"
+              icon="pi pi-clipboard"
+              label="Paste repetitions from clipboard" 
+              onClick={handleEventRepetitionsPaste} 
+            />
             {renderEventTable()}
             {renderButtons()}
           </TabPanel>
