@@ -30,9 +30,10 @@ export interface RainflowDataColumns {
   cycleIndex: Float64Array;
   percCumDamage: Float64Array;
   maxOfCycle: Float64Array;
-  cycleReptes: Float64Array;
+  cycleRepets: Float64Array;
   minOfCycle: Float64Array;
 }
+
 // Equivalent signal row
 // [range, mean, repetition, %damage, damage, lastOne]
 export type EquivalentSignalRow = [
@@ -43,3 +44,8 @@ export type EquivalentSignalRow = [
   number, // damage
   number, // average_mean_for_block
 ];
+
+export interface HistogramType {
+  counts: Float64Array;
+  binEdges: Float64Array;
+}

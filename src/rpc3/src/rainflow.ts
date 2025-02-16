@@ -2,7 +2,8 @@
 import { findMinMax, linspace } from './utils';
 import { CumulativeDataType } from './types';
 import { Channel } from './channel';
-import { EventType, RFResultType, CombineChannelsType } from './types';
+import { EventType, RFResultType, CombineChannelsType, HistogramType } from './types';
+import { parseAllRainflowData } from './eq_dmg_signal';
 
 /**
  * 1) Discretize the signal into k bins
@@ -434,7 +435,6 @@ export function combine_channels_range_counts(channels: Channel[], events:EventT
  *  - Filters based on `gate` threshold
  *  - Sorts in descending order
  *  - Computes damage percentage and cumulative damage
- *  - Produces step-like arrays for plotting
  *
  * @param {Float64Array} data - Input cycle data as [range1, count1, range2, count2, ...].
  * @param {number} slope - The exponent for damage calculation.
@@ -504,4 +504,123 @@ export function cumulative_rainflow_data(data: Float64Array, slope: number, gate
     dcum: DcumRaw,
     totalDamage: damageSum,
   };
+}
+
+/**
+ * Calculates the level crossing distribution using a weighted histogram approach.
+ *
+ * This function combines peak and valley values with their repetition counts to
+ * build a single weighted dataset. It then splits the range at the mean value
+ * to produce two histograms (min→mean, mean→max), merges and inverts counts
+ * to form a continuous cumulative curve, and finally inserts an extra cycle at
+ * the start and end for boundary conditions.
+ *
+ * @param rfList - An array of Float64Arrays, each storing [peak, valley, ...].
+ * @param repetitions - The repetition count for each signal in `rfList`.
+ * @param binCount - The number of histogram bins on each side (default = 256).
+ * @returns A tuple:
+ *  - `[0]`: A Float64Array (`LCcum`) of cumulative crossing counts (with two added boundary points).
+ *  - `[1]`: A Float64Array (`LClevel`) of the corresponding level edges (duplicated boundary).
+ */
+export function level_crossing( rfList: Float64Array[], repetitions: number[], binCount = 256): [Float64Array, Float64Array] {
+  // Get peak/valley and repetition data
+  const { maxOfCycle, minOfCycle, cycleRepets } = parseAllRainflowData(rfList, repetitions);
+
+  // Combine peak and valley with their weights (repetitions)
+  const nCycles = maxOfCycle.length;
+  const combined = new Float64Array(nCycles * 2);
+  const weights = new Float64Array(nCycles * 2);
+  combined.set(maxOfCycle, 0);
+  combined.set(minOfCycle, nCycles);
+  weights.set(cycleRepets, 0);
+  weights.set(cycleRepets, nCycles);
+
+  // Single-pass min, max, weighted sum for mean
+  let minVal = combined[0], maxVal = combined[0];
+  let sumVal = 0, totW = 0;
+  for (let i = 0; i < combined.length; i++) {
+    const v = combined[i];
+    const w = weights[i];
+    if (v < minVal) minVal = v;
+    if (v > maxVal) maxVal = v;
+    sumVal += v * w;
+    totW += w;
+  }
+  const meanVal = sumVal / totW;
+
+  // Bin edges
+  const binsPos = new Float64Array(linspace(minVal, meanVal, binCount));
+  const binsNeg = new Float64Array(linspace(meanVal, maxVal, binCount));
+
+  // Weighted histograms
+  const { counts: posCounts, binEdges: posEdges } = histogram(combined, weights, binsPos);
+  const { counts: negCounts, binEdges: negEdges } = histogram(combined, weights, binsNeg);
+
+  // Cumulative sums
+  const posCsum = cumulativeSum(posCounts);             // forward
+  const negCsum = cumulativeSum(negCounts).reverse();   // reversed
+
+  // Merge cumsums into a single typed array + add "1" at ends
+  const mergedLen = posCsum.length + negCsum.length;
+  const LCcum = new Float64Array(mergedLen + 2);
+  LCcum[0] = 1;
+  LCcum.set(posCsum, 1);
+  LCcum.set(negCsum, 1 + posCsum.length);
+  LCcum[LCcum.length - 1] = 1;
+
+  // Merge bin edges + duplicate first/last
+  const mergedEdges = new Float64Array(mergedLen + 2);
+  mergedEdges[0] = posEdges[0];
+  mergedEdges.set(posEdges.subarray(0, posEdges.length - 1), 1);
+  mergedEdges.set(negEdges.subarray(1), posEdges.length);
+  mergedEdges[mergedEdges.length - 1] = mergedEdges[mergedEdges.length - 2];
+
+  return [LCcum, mergedEdges];
+}
+
+/**
+ * Constructs a weighted histogram for the given data and bin edges.
+ *
+ * Each data value has a corresponding weight, representing how many times
+ * that value occurs. The function increments bin counts by those weights
+ * instead of just 1.
+ *
+ * @param data - The Float64Array containing data values (e.g., combined peaks/valleys).
+ * @param weights - A Float64Array of the same length, storing weights for each value in `data`.
+ * @param bins - The Float64Array of bin edges to classify `data` into.
+ * @returns An object containing:
+ *  - `counts`: A Float64Array of weighted bin counts.
+ *  - `binEdges`: The same bin edges passed in (for convenience).
+ */
+function histogram(data: Float64Array, weights: Float64Array, bins: Float64Array): HistogramType {
+  const counts = new Float64Array(bins.length - 1);
+  for (let i = 0; i < data.length; i++) {
+    const x = data[i];
+    const w = weights[i];
+    // Simple linear bin search (fine for moderate binCount)
+    for (let j = 0; j < bins.length - 1; j++) {
+      if (x >= bins[j] && x < bins[j + 1]) {
+        counts[j] += w;
+        break;
+      }
+    }
+  }
+  return { counts, binEdges: bins };
+}
+
+/**
+ * Computes the cumulative sum of a Float64Array and returns a new array.
+ *
+ * @param arr - A Float64Array of values to be summed in order.
+ * @returns A Float64Array where each element is the sum of all preceding
+ *          elements in the input, including the current one.
+ */
+function cumulativeSum(arr: Float64Array): Float64Array {
+  const out = new Float64Array(arr.length);
+  let s = 0;
+  for (let i = 0; i < arr.length; i++) {
+    s += arr[i];
+    out[i] = s;
+  }
+  return out;
 }

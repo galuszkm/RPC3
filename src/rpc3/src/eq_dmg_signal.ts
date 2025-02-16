@@ -21,16 +21,16 @@ import { RainflowDataColumns, EquivalentSignalRow } from "./types";
  *   - `cycleIndex`:        Global index of the cycle.
  *   - `percCumDamage`:     Percent of total damage (initially zero, filled later).
  *   - `maxOfCycle`:        Maximum load in the cycle.
- *   - `cycleReptes`:       Repetitions for that signal, applied to each cycle.
+ *   - `cycleRepets`:       Repetitions for that signal, applied to each cycle.
  *   - `minOfCycle`:        Minimum load in the cycle.
  *
  * @param rfList - Array of Float64Arrays, each storing [peak, valley, peak, valley, ...].
  * @param repetitions - How many times each corresponding `rfList` signal is repeated.
- * @param slope - The fatigue exponent used in damage = (range^slope) * repeats.
+ * @param slope - (Optional) The fatigue exponent used in damage = (range^slope) * repeats.
  * @returns A `RainflowDataColumns` object with one row (index) per cycle across all inputs.
  * @throws Error if `rfList` and `repetitions` lengths differ, or if any `Float64Array` has an odd length.
  */
-function parseAllRainflowData(rfList: Float64Array[], repetitions: number[], slope: number): RainflowDataColumns {
+export function parseAllRainflowData(rfList: Float64Array[], repetitions: number[], slope?: number): RainflowDataColumns {
   // Basic check
   if (rfList.length !== repetitions.length) {
     throw new Error("rfList and repetitions must be the same length.");
@@ -56,7 +56,7 @@ function parseAllRainflowData(rfList: Float64Array[], repetitions: number[], slo
   const cycleIndex = new Float64Array(totalCycles);
   const percCumDamage = new Float64Array(totalCycles); // will fill later
   const maxOfCycle = new Float64Array(totalCycles);
-  const cycleReptes = new Float64Array(totalCycles);
+  const cycleRepets = new Float64Array(totalCycles);
   const minOfCycle = new Float64Array(totalCycles);
 
   // Fill each array by iterating over all signals
@@ -77,14 +77,14 @@ function parseAllRainflowData(rfList: Float64Array[], repetitions: number[], slo
       const mn = peak < valley ? peak : valley;
 
       // damage = repets * (range^slope)
-      const dmg = signalRepeats * Math.pow(r, slope);
+      const dmg = slope ? signalRepeats * Math.pow(r, slope) : 0;
       range[fillPosition] = r;
       damageOfCycle[fillPosition] = dmg;
       cumulDamage[fillPosition] = 0; // temporarily 0, to be filled later
       cycleIndex[fillPosition] = globalCycleCounter;
       percCumDamage[fillPosition] = 0; // temporarily 0, to fill later
       maxOfCycle[fillPosition] = mx;
-      cycleReptes[fillPosition] = signalRepeats;
+      cycleRepets[fillPosition] = signalRepeats;
       minOfCycle[fillPosition] = mn;
 
       fillPosition++;
@@ -100,7 +100,7 @@ function parseAllRainflowData(rfList: Float64Array[], repetitions: number[], slo
     cycleIndex,
     percCumDamage,
     maxOfCycle,
-    cycleReptes,
+    cycleRepets,
     minOfCycle
   };
 }
@@ -496,7 +496,7 @@ function adjustBlockMeansToGlobalMinMax(eqSignal: EquivalentSignalRow[]): void {
  *
  * @param columns - The rainflow data in columnar form (RainflowDataColumns), which includes arrays
  *                  for range, damageOfCycle, cumulDamage, cycleIndex, percCumDamage, maxOfCycle,
- *                  cycleReptes, and minOfCycle.
+ *                  cycleRepets, and minOfCycle.
  * @param blocksNumber - The desired number of blocks for the equivalent signal.
  * @param minNumOfCycles - The minimum required total number of cycles in the equivalent signal.
  * @param slope - The fatigue slope (exponent) used in the damage calculation (damage = range^slope * repetitions).
@@ -513,7 +513,7 @@ function calculateEqSignal(
   // Count the total number of cycles in the original signals
   let totalNumCyclesOriginal = 0;
   for (let i = 0; i < columns.range.length; i++) {
-    totalNumCyclesOriginal += columns.cycleReptes[i];
+    totalNumCyclesOriginal += columns.cycleRepets[i];
   }
   if (totalNumCyclesOriginal < minNumOfCycles) {
     throw new Error("Original signal has less cycles than requested minimum.");
@@ -561,7 +561,7 @@ function calculateEqSignal(
  * @returns An array of `EquivalentSignalRow` representing the final equivalent damage signal.
  */
 export function eqDmgSignal(
-  rfList: Float64Array[], repetitions: number[],blocksNumber: number, minNumOfCycles: number, slope: number
+  rfList: Float64Array[], repetitions: number[], blocksNumber: number, minNumOfCycles: number, slope: number
 ): EquivalentSignalRow[] {
   // Convert (peak,valley) arrays + repetitions into columnar data
   const columns = parseAllRainflowData(rfList, repetitions, slope);
@@ -572,3 +572,46 @@ export function eqDmgSignal(
   // Return the final equivalent signal
   return eqSignal;
 }
+
+/**
+ * Builds a cumulative data series (x, y) from an equivalent damage signal array.
+ *
+ * - If `type` is `"cycles"`, each step in the x-axis is the running total of cycles (`row[2]`).
+ * - If `type` is `"damage"`, each step is the running total of damage (`row[3]`).
+ * - The y-axis is the signal level (`row[0]`).
+ * - A final point at `x = 100` (for `"damage"`) or `x = cumulativeCycles` (for `"cycles"`)
+ *   is added to close out the signal, along with a vertical extension down to `yMin`.
+ *
+ * @param eqSignal - An array of `EquivalentSignalRow`, where each row provides data for one segment.
+ * @param type - Either `"cycles"` or `"damage"`, determining which column is summed for the x-axis.
+ * @param yMin - The minimum y-value used to extend the last point downward, closing the plot visually.
+ * @returns A tuple `[x, y]` where:
+ *  - `x` is a cumulative series of either cycles or damage.
+ *  - `y` is the corresponding signal level at each step, plus a final extension to `yMin`.
+ */
+export function eqDmgSignalCumulative(eqSignal: EquivalentSignalRow[], type: string, yMin: number): [number[], number[]] {
+  const x: number[] = [];
+  const y: number[] = [];
+
+  if (!eqSignal.length) return [x, y];
+
+  let cumulativeValue = 0;
+  x.push(type === "cycles" ? 1 : 0);
+  y.push(eqSignal[0][0]);
+
+  eqSignal.forEach((row) => {
+    cumulativeValue += type === "cycles" ? row[2] : row[3];
+    x.push(cumulativeValue);
+    y.push(row[0]);
+  });
+
+  x.push(type === "damage" ? 100 : cumulativeValue);
+  y.push(eqSignal[eqSignal.length - 1][0]);
+
+  // Extend the last point downward to yMin
+  x.push(x[x.length - 1]);
+  y.push(yMin);
+
+  return [x, y];
+}
+

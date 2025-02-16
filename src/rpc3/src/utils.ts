@@ -1,11 +1,21 @@
-
+/**
+ * Generates a linearly spaced array between two values.
+ *
+ * @param start - The starting value of the sequence.
+ * @param stop - The ending value of the sequence.
+ * @param n - The number of points to generate.
+ * @returns A `Float64Array` containing `num` evenly spaced values.
+ */
 export function linspace(start: number, stop: number, n: number): number[] {
-  if (n === 1) return [start];
   const step = (stop - start) / (n - 1);
-  return Array.from({ length: n }, (_, i) => start + i * step);
+  const arr = [];
+  for (let i = 0; i < n; i++) {
+    arr.push(start + step * i);
+  }
+  return arr;
 }
 
-export const findMinMax = (arr: Float64Array | number[]): { min: number; max: number } => {
+export const findMinMax = (arr: Float64Array|number[]): { min: number; max: number } => {
   let min = Infinity;
   let max = -Infinity;
   for (let i = 0; i < arr.length; i++) {
@@ -15,7 +25,7 @@ export const findMinMax = (arr: Float64Array | number[]): { min: number; max: nu
   return { min, max };
 };
 
-export const findMin = (arr: Float64Array | number[]): number => {
+export const findMin = (arr: Float64Array|number[]): number => {
   let min = Infinity;
   for (let i = 0; i < arr.length; i++) {
     if (arr[i] < min) min = arr[i];;
@@ -23,13 +33,35 @@ export const findMin = (arr: Float64Array | number[]): number => {
   return min;
 };
 
-export const findMax = (arr: Float64Array | number[]): number  => {
+export const findMax = (arr: Float64Array|number[]): number  => {
   let max = -Infinity;
   for (let i = 0; i < arr.length; i++) {
     if (arr[i] > max) max = arr[i];
   }
   return max;
 };
+
+/**
+ * Computes the mean (average) of a large `Float64Array` efficiently.
+ *
+ * Uses a loop-based summation approach to minimize memory overhead
+ * and maximize performance for large datasets.
+ *
+ * @param data - A `Float64Array` containing numerical values.
+ * @returns The mean (average) value of the array.
+ * @throws Error if the array is empty.
+ */
+export function findMean(data: Float64Array|number[]): number {
+  const len = data.length;
+  if (len === 0) {
+    throw new Error("Cannot compute mean of an empty array.");
+  }
+  let sum = 0;
+  for (let i = 0; i < len; i++) {
+    sum += data[i];
+  }
+  return sum / len;
+}
 
 export function normalizeInt16(array: Float64Array): [Int16Array, number] {
   // Array bounds
@@ -99,4 +131,8 @@ export function calcDamage(slope: number, range_counts: Float64Array): number {
   }
 
   return totalDamage;
+}
+
+export function prettyNumberFormat(x: number, round?: number) {
+  return Number(x.toFixed(round)).toLocaleString("en-US").replace(/,/g, " ")
 }
