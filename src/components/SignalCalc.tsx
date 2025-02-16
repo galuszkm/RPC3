@@ -8,9 +8,9 @@ import { SelectButton } from "primereact/selectbutton";
 import { Tooltip } from 'primereact/tooltip';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { 
-  Channel, EventType, calcDamage, eqDmgSignal,
+  Channel, EventType, calcDamage, eqDmgSignal, level_crossing,
   cumulative_rainflow_data, combine_channels_range_counts,
-  EquivalentSignalRow, 
+  EquivalentSignalRow, prettyNumberFormat, eqDmgSignalCumulative,
 } from "../rpc3";
 import "./SignalCalc.css";
 
@@ -32,6 +32,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const [minNoCycles, setMinNoCycles] = useState(250e3);
   const [combine, setCombine] = useState(false);
   const [displayEvents, setDisplayEvents] = useState<EventType[]>([]);
+  const [displayEqSignals, setDisplayEqSignals] = useState(true);
   
   // Chart data
   const [name, setName] = useState<string[]>([]);
@@ -122,6 +123,11 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         return null;
       }).filter(Boolean); // Remove invalid entries
   
+      // Show error if nothing to paste
+      if (!reps.length) {
+        postErrorClipboard("Format error", "Could not set repetitions. Incorrect data format.")
+      }
+      // Set repetitions to events
       Object.values(events).forEach((e) => {
         const r = reps.find((i) => i?.name === e.name);
         if (r) {
@@ -178,23 +184,48 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     }
   }
 
+  const calcLC = (channels: Channel[]) => {
+    // Collect Channels rainflow cycles and repetitions
+    const cycles = channels.map(c => c.cycles);
+    const repetitions = channels.map(c => c.repetitions);
+    // Try to calculate eq block signal
+    try {
+      return level_crossing(cycles, repetitions)
+    } catch(error) {
+      console.error(error);
+      const evName = channels.length > 1 ? "Combined events" : channels[0].filename;
+      const chanName = channels[0].Name;
+      postErrorCalculations(toast, 'Could not compute level crossing!', chanName, evName, String(error));
+      return [new Float64Array(), new Float64Array()]
+    }
+  }
+
   const combineChannels = (name: string, channels: Channel[]): [string, Float64Array, number, Channel[]] => {
+    // Determine event name based on given channels
+    const evName = channels.length > 1 ? 'combined events': String(channels[0].filename);
+    const serieName = `${name} - ${evName}`;
+
     // Combine channels to get combined range counts and residual cycles
-    const {rangeCounts, residualCycles} = combine_channels_range_counts(channels, displayEvents);
-    const dmg = calcDamage(slope, rangeCounts);
-    
-    // Create artifical channel for residuals and set its RF cycles
-    const residualChannel = new Channel(999999, channels[0].Name, channels[0].Units, 1, channels[0].dt, 'Combined residuals');
-    residualChannel.setRainflowCycles(residualCycles);
-    residualChannel.repetitions = 1;
-    
-    // Create channels collection for further eq damage signal calculation
-    const chan = [...channels, residualChannel];
+    try {
+      const {rangeCounts, residualCycles} = combine_channels_range_counts(channels, displayEvents);
+      const dmg = calcDamage(slope, rangeCounts);
 
-    const evName = channels.length > 1 ? 'combined events': String(channels[0].filename)
-    const serieName = `${name} - ${evName}`
+      // Create artifical channel for residuals and set its RF cycles
+      const residualChannel = new Channel(999999, channels[0].Name, channels[0].Units, 1, channels[0].dt, 'Combined residuals');
+      residualChannel.setRainflowCycles(residualCycles);
+      residualChannel.repetitions = 1;
+      
+      // Create channels collection for further eq damage signal calculation
+      const chan = [...channels, residualChannel];
 
-    return [serieName, rangeCounts, dmg, chan]
+      return [serieName, rangeCounts, dmg, chan]
+    } catch (error) {
+      console.error(error);
+      const evName = channels.length > 1 ? "Combined events" : channels[0].filename;
+      const chanName = channels[0].Name;
+      postErrorCalculations(toast, 'Failed to combine channels!', chanName, evName, String(error));
+      return [serieName, new Float64Array(), 0, channels]
+    }
   }
 
   const handleCalculate = () => {
@@ -221,7 +252,11 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     let channelGroups: [string, Float64Array, number, Channel[]][] = [];
     if (combine) {
       groupChannelsByName().forEach(
-        ([name, chans]) => {channelGroups.push(combineChannels(name, chans))}
+        ([name, chans]) => {
+          const combined = combineChannels(name, chans);
+          if (combined[1].length > 0)
+          channelGroups.push(combined)
+        }
       );
     } else {
       // Treat each channel separatelly
@@ -236,14 +271,20 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     const __ncum__: Float64Array[] = [];
     const __dcum__: Float64Array[] = [];
     const __damage__: number[] = [];
+    const __lcx__: Float64Array[] = [];
+    const __lcy__: Float64Array[] = [];
+
     for (let c of channelGroups) {
-      const [channelName, range_counts, dmg] = c;
+      const [channelName, range_counts, dmg, channels] = c;
       const { range, ncum, dcum } = cumulative_rainflow_data(range_counts, slope, gate);
+      const [lcx, lcy] = calcLC(channels);
       __name__.push(channelName);
       __range__.push(range);
       __ncum__.push(ncum);
       __dcum__.push(dcum);
-      __damage__.push(dmg)
+      __damage__.push(dmg);
+      __lcx__.push(lcx);
+      __lcy__.push(lcy);
     }
 
     // Calculate equivalent block signals
@@ -269,7 +310,8 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     setNcum(__ncum__);
     setDcum(__dcum__);
     setDamage(__damage__);
-    lcX;lcY;
+    setLcX(__lcx__);
+    setLcY(__lcy__);
   }
 
   const handleClose = () => {
@@ -313,7 +355,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     <div className="controls-box">
       {/* Wohler slope */}
       <div className="input-block">
-        <label>Wohler slope</label>
+        <label>Wöhler slope</label>
         <input
           name="slope"
           type="number"
@@ -398,7 +440,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     const [chanName, evName] = eqSignalNames[idx].split(' - ');
     const units = eqSignalUnits[idx];
     return (
-      <div className="eq-signal-item">
+      <div className="eq-signal-item" key={eqSignalNames + String(idx)}>
         <div className="eq-signal-table-title">
           <span><b>Channel:</b>{chanName}</span>
           <span><b>Event:</b>{evName}</span>
@@ -418,34 +460,42 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
           <tbody>
             {eqSignal.map((i, idx) => (
               <tr key={idx+i[0]+i[1]+i[4]}>
-                <td className="id"     >{idx+1}</td>
-                <td className="max"    >{(i[1] + i[0]/2).toFixed(2)}</td>
-                <td className="min"    >{(i[1] - i[0]/2).toFixed(2)}</td>
-                <td className="range"  >{i[1].toFixed(2)}</td>
-                <td className="repets" >{i[2].toLocaleString("en-US").split('.')[0].replace(/,/g, " ")}</td>
-                <td className="damage%">{i[3].toFixed(1)}</td>
-                <td className="damage" >{i[4].toExponential(2)}</td>
+                <td key="id"      className="id"     >{idx+1}</td>
+                <td key="max"     className="max"    >{prettyNumberFormat(i[1] + i[0]/2, 2)}</td>
+                <td key="min"     className="min"    >{prettyNumberFormat(i[1] - i[0]/2, 2)}</td>
+                <td key="range"   className="range"  >{prettyNumberFormat(i[0], 2)}</td>
+                <td key="repets"  className="repets" >{prettyNumberFormat(i[2])}</td>
+                <td key="damage%" className="damage%">{i[3].toFixed(1)}</td>
+                <td key="damage"  className="damage" >{i[4].toExponential(2)}</td>
               </tr>
             ))}
+            {/* SUMMARY ROW */}
+            <tr key="summary-row" className="summary-row">
+              <td key="id"      className="id"     ></td>
+              <td key="max"     className="max"    ></td>
+              <td key="min"     className="min"    ></td>
+              <td key="range"   className="range"  >SUM:</td>
+              <td key="repets"  className="repets" >{prettyNumberFormat(eqSignal.reduce((acc, i) => acc+i[2], 0))}</td>
+              <td key="damage%" className="damage%">{eqSignal.reduce((acc, i) => acc+i[3], 0).toFixed(1)}</td>
+              <td key="damage"  className="damage" >{eqSignal.reduce((acc, i) => acc+i[4], 0).toExponential(2)}</td>
+            </tr>
           </tbody>
         </table>
       </div>
     )
   }
 
-  const renderButtons = () => (
+  const renderUtilsButtons = () => (
     <div className="controls-box">
       {/* Combine events */}
-      <div className="combine-events">
+      <div className="switch-button-root tooltip-target-combine-events">
+        <div className="title"> Combine channels accros all events </div>
         <SelectButton 
-          className="combine-events-button tooltip-target-combine-events"
+          className="switch-button"
           value={combine ? 'On' : 'Off'} 
           onChange={(e) => setCombine(e.value === "On")} 
           options={['Off', 'On']} 
         />
-        <div className="title">
-          Combine channels accros all events
-        </div>
         <Tooltip target=".tooltip-target-combine-events" position="top">
           <div>
             Merge channels with the same name across events <br />
@@ -453,40 +503,69 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
           </div>
         </Tooltip>
       </div>
+      <div className="switch-button-root">
+        <div className="title">Display Eq. block signals on charts</div>
+        <SelectButton 
+          className="switch-button"
+          value={displayEqSignals ? 'On' : 'Off'} 
+          onChange={(e) => setDisplayEqSignals(e.value === "On")} 
+          options={['Off', 'On']} 
+        />
+      </div>
       <Button className="cbutton calculate" label="Calculate" onClick={handleCalculate} />
     </div>
   );
 
   const renderTabChart = () => {
-    const rangeUnits = [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", ")
+    const rangeUnits = [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", ");
+    const rangeMin = Math.min(...range.map(i => i[i.length-1]));
     return (
       <div className="chart">
         <TabView activeIndex={activeIndexChart} onTabChange={(e) => setActiveIndexChart(e.index)}>
-          <TabPanel className="tab-panel" header="Cumulative Cycles">
+          <TabPanel key="cum-cycles" className="tab-panel" header="Cumulative Cycles">
             <Suspense fallback={<></>}>
               <CumulativeChart 
+                key={String(displayEqSignals)}
                 x={ncum} 
                 y={range} 
                 name={name} 
                 xTypeLog={true}
                 xLabel="Cumulative cycles [-]" 
                 yLabel={`Range ${rangeUnits}`}
+                eqSignals={displayEqSignals ? eqSignals.map(i => eqDmgSignalCumulative(i, 'cycles', rangeMin)) : []}
+                eqSignalsName={displayEqSignals ? eqSignalNames : []}
               />
              </Suspense>
           </TabPanel>
-          <TabPanel className="tab-panel" header="Percentage of total damage">
+          <TabPanel key="cum-damage" className="tab-panel" header="Percentage of total damage">
             <Suspense fallback={<></>}>
-              <CumulativeChart 
+              <CumulativeChart
+                key={String(displayEqSignals)}
                 x={dcum} 
                 y={range} 
                 name={name} 
                 xTypeLog={false}
                 xLabel="Percentage of total damage [%]" 
                 yLabel={`Range ${rangeUnits}`}
+                eqSignals={displayEqSignals ? eqSignals.map(i => eqDmgSignalCumulative(i, 'damage', rangeMin)) : []}
+                eqSignalsName={displayEqSignals ? eqSignalNames : []}
               />
              </Suspense>
           </TabPanel>
-          <TabPanel className="tab-panel eq-signals" header="Eq block signals">
+          <TabPanel key="lc" className="tab-panel" header={<div style={{marginRight: '0.7rem'}}>Level crossing</div>}>
+            <Suspense fallback={<></>}>
+              <CumulativeChart
+                key={String(displayEqSignals)}
+                x={lcX} 
+                y={lcY} 
+                name={name} 
+                xTypeLog={true}
+                xLabel="Level crossing [-]" 
+                yLabel={`${rangeUnits}`}
+              />
+             </Suspense>
+          </TabPanel>
+          <TabPanel key="eq-signals" className="tab-panel eq-signals" header="Eq block signals">
             <div className="eq-signal-root">
               {eqSignals.map((i, idx) => renderTableEqSignal(i, idx))}
             </div>
@@ -509,7 +588,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
               onClick={handleEventRepetitionsPaste} 
             />
             {renderEventTable()}
-            {renderButtons()}
+            {renderUtilsButtons()}
           </TabPanel>
           <TabPanel className="tab-panel" header="Results">
             {renderDamageTable()}

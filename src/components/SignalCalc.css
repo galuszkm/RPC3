@@ -130,33 +130,35 @@
     border-bottom: 2px solid rgb(235,235,235);
 }
 
-/* COMBINE EVENTS BUTTON */
-.signal-calc-grid > .utils .combine-events {
+/* ELEMENTS WITH SWITCH BUTTON */
+.signal-calc-grid > .utils .switch-button-root {
     display: flex;
     flex-direction: row;
     align-items: center;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
+    gap: 1rem;
 }
-.signal-calc-grid > .utils .combine-events-button .p-button{
+.signal-calc-grid > .utils .switch-button .p-button{
     padding: 5px 14px 5px 14px;
-    height: 2.4rem;
+    height: 1.9rem;
 }
-.signal-calc-grid > .utils .combine-events-button .p-button.p-highlight {
+.signal-calc-grid > .utils .switch-button .p-button.p-highlight {
     background-color: rgb(113, 162, 236);
     border-color: rgb(116, 166, 241);
 }
-.signal-calc-grid > .utils .combine-events-button .p-button:focus {
+.signal-calc-grid > .utils .switch-button .p-button:focus {
     outline: none !important;
     box-shadow: none !important;
 }
-.signal-calc-grid > .utils .combine-events > .title {
+.signal-calc-grid > .utils .switch-button-root > .title {
     font-weight: bold;
-    margin-left: 1rem;
     font-size: 14px;
+    flex-grow: 1;
 }
 
 /* CALCULATE BUTTON*/
 .signal-calc-grid > .utils .calculate {
+    margin-top: 1rem;
     width: 100%;
 }
 
@@ -275,4 +277,9 @@
 .signal-calc-dialog table.eq-signal-table th:not(:first-child),
 .signal-calc-dialog table.eq-signal-table td:not(:first-child){
     border-left: 1px solid rgb(229, 231, 235);
+}
+
+.signal-calc-dialog table.eq-signal-table tr.summary-row > td {
+    background-color: rgb(245, 245, 245);
+    font-weight: bold;
 }

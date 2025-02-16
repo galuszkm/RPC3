@@ -1,9 +1,9 @@
 import ReactECharts from "echarts-for-react";
 import { useEffect, useRef } from "react";
-import { fixedOptions } from "./CumulativeChartOptions";
+import { fixedOptions, tooltipFormatter } from "./CumulativeChartOptions";
 import "./CumulativeChart.css";
 
-const generateData = (x: Float64Array, y: Float64Array) => {
+const generateData = (x: Float64Array | number[], y: Float64Array | number[]) => {
   const len = x.length;
   const data = new Float64Array(len * 2);
   for (let i = 0; i < len; i++) {
@@ -20,10 +20,14 @@ interface CumulativeChartProps {
   xLabel?: string;  // Optional with a default value
   yLabel?: string;  // Optional with a default value
   xTypeLog?: boolean;  // Optional with a default value
+  eqSignals?: [number[], number[]][] // Optional eq block signals
+  eqSignalsName?: string[] // Optional eq block signals names
 }
 
 export default function CumulativeChart({
-  x, y, name, xLabel = "Cumulative [-]", yLabel = "Range", xTypeLog = false,
+  x, y, name, 
+  xLabel = "Cumulative [-]", yLabel = "Range", xTypeLog = false,
+  eqSignals = [], eqSignalsName = [],
 }: CumulativeChartProps) {
   const chartRef = useRef<ReactECharts | null>(null);
 
@@ -77,6 +81,22 @@ export default function CumulativeChart({
           lineStyle: { width: 3 },
         });
       }
+      for (let i=0; i<eqSignals.length; i++) {
+        seriesData.push({
+          type: "line",
+          step: 'start',
+          name: `Eq. signal ${eqSignalsName[i]}`,
+          dimensions: ["x", "y"],
+          data: generateData(...eqSignals[i]),
+          showSymbol: false,
+          large: true,
+          sampling: "lttb",
+          silent: true,
+          // areaStyle: { opacity: 0.15 },
+          lineStyle: { width: 3 },
+          color: 'rgba(255,0,0,0.6)',
+        });
+      }
 
       // Update Chart
       chartInstance.setOption(
@@ -91,6 +111,10 @@ export default function CumulativeChart({
           yAxis: {
             ...fixedOptions.yAxis,
             name: yLabel,
+          },
+          tooltip: {
+            ...fixedOptions.tooltip,
+            formatter: (params: Object) => tooltipFormatter(params, xLabel),
           }
         },
         {
