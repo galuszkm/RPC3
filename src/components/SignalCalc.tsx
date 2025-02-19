@@ -30,7 +30,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const [gate, setGate] = useState(5);
   const [blockNo, setBlockNo] = useState(5);
   const [minNoCycles, setMinNoCycles] = useState(250e3);
-  const [combine, setCombine] = useState(false);
+  const [combine, setCombine] = useState(true);
   const [displayEvents, setDisplayEvents] = useState<EventType[]>([]);
   const [displayEqSignals, setDisplayEqSignals] = useState(true);
   
@@ -75,8 +75,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   // MIDDLEWARES
 
   const clearStates = () => {
-    [
-      setRange, setName, setNcum, setDcum, setLcX, setLcY, setDamage,
+    [ setRange, setName, setNcum, setDcum, setLcX, setLcY, setDamage,
       setEqSignalNames, setEqSignalUnits, setEqSignals,
     ].forEach(set => set([]));
   }
@@ -184,7 +183,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     }
   }
 
-  const calcLC = (channels: Channel[]) => {
+  const calcLC = (channels: Channel[]): [Float64Array, Float64Array] => {
     // Collect Channels rainflow cycles and repetitions
     const cycles = channels.map(c => c.cycles);
     const repetitions = channels.map(c => c.repetitions);
@@ -271,20 +270,20 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     const __ncum__: Float64Array[] = [];
     const __dcum__: Float64Array[] = [];
     const __damage__: number[] = [];
-    const __lcx__: Float64Array[] = [];
-    const __lcy__: Float64Array[] = [];
+    const __lcX__: Float64Array[] = [];
+    const __lcY__: Float64Array[] = [];
 
     for (let c of channelGroups) {
       const [channelName, range_counts, dmg, channels] = c;
       const { range, ncum, dcum } = cumulative_rainflow_data(range_counts, slope, gate);
-      const [lcx, lcy] = calcLC(channels);
+      const lc = calcLC(channels);
       __name__.push(channelName);
       __range__.push(range);
       __ncum__.push(ncum);
       __dcum__.push(dcum);
       __damage__.push(dmg);
-      __lcx__.push(lcx);
-      __lcy__.push(lcy);
+      __lcX__.push(lc[0]);
+      __lcY__.push(lc[1]);
     }
 
     // Calculate equivalent block signals
@@ -310,8 +309,8 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     setNcum(__ncum__);
     setDcum(__dcum__);
     setDamage(__damage__);
-    setLcX(__lcx__);
-    setLcY(__lcy__);
+    setLcX(__lcX__);
+    setLcY(__lcY__);
   }
 
   const handleClose = () => {
