@@ -39,6 +39,7 @@ const tooltipFormatter = (params: any) => {
 
 export const fixedOptions = {
     title: {},
+    animation: false,
     legend: {
       show: true,
       orient: "horizontal",

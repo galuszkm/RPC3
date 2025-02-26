@@ -105,18 +105,19 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         postErrorClipboard("Clipboard is empty", "No text data found in clipboard.");
         return;
       }
-      const validEventNames = new Set(Object.values(events).map(i => i.name)); // Use Set for faster lookup
+      const validEventNames = new Set(Object.values(displayEvents).map(i => i.name)); // Use Set for faster lookup
       const lines = text.split(/\r?\n/); // Split into lines
       const reps = lines.map((line) => {
         // Try different separators (tab, semicolon, colon, comma)
-        const parts = line.split(/[\t;:,]/).map((part) => part.trim());
+        const parts = line.split(/[\t;:,]+/).map(part => part.trim());
         if (parts.length >= 2) {
           let [nameStr, repetitionsStr] = parts;
           const name = nameStr.includes('.') ? nameStr.split('.')[0] : nameStr; // Handle dot separation
-          const repetitions = parseInt(repetitionsStr, 10);
-  
+          const repetitions = parseInt(repetitionsStr.replace(' ', ''), 10);
           if (!isNaN(repetitions) && validEventNames.has(name)) {
             return { name, repetitions };
+          } else {
+            console.warn(`Pasted line not valid:\n${line}`)
           }
         }
         return null;
@@ -127,7 +128,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         postErrorClipboard("Format error", "Could not set repetitions. Incorrect data format.")
       }
       // Set repetitions to events
-      Object.values(events).forEach((e) => {
+      Object.values(displayEvents).forEach((e) => {
         const r = reps.find((i) => i?.name === e.name);
         if (r) {
           setEvent({ ...e, repetitions: r.repetitions });
