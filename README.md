@@ -28,11 +28,11 @@ Automotive durability testing generates vast amounts of data, and conventional t
 This methods aims to propose simplified test in such way that the potential damage of both signals is the same. This approach allows for advanced manipulation of the cycles (replacing many low cycles with few high ones), which allows to significantly reduce the testing time. However this comes at a cost of requiring strictly linear relationship between external load and stress.
 
 Equivalent test proposal procedure consist of following steps:
-1.	Splitting random signal (road load data) into separate cycles. This is performed by rain-flow counting algorithm. This step results in list of cycles where each cycle has load-range (max-min) and load-mean value ( (max+min)/2 ). This step is performed by algorithm embedded in nCode software and therefore it is not described in this report.
+1.	Splitting random signal (road load data) into separate cycles. This is performed by rain-flow counting algorithm. This step results in list of cycles where each cycle has load-range (max-min) and load-mean value (max+min)/2.
 2. Grouping similar cycles into one block
 3. Damage recalculation – this part is performed to define equivalent block’s load-range and repetitions.
 4. Defining mean value of equivalent blocks
-5. Grouping cycles into one block - This part is performed with the use of cumulative damage graph. All the cycles from rain-flow counting algorithm (blue) are ordered by decreasing load-range. On the X-axis, percentage damages from each cycle are staked one after another. This graph allows to distribute the equivalent blocks (red) in such way that the damage from equivalent blocks cover  as much as possible the damage from the original signal (this is to avoid excessive damage recalculation in next step). In practice the aim is to minimize the gray/dashed area.   
+5. Grouping cycles into one block - This part is performed with the use of cumulative damage graph. All the cycles from rain-flow counting algorithm (blue) are ordered by decreasing load-range. On the X-axis, percentage damages from each cycle are staked one after another. This graph allows to distribute the equivalent blocks (red) in such way that the damage from equivalent blocks cover as much as possible the damage from the original signal (this is to avoid excessive damage recalculation in next step). In practice the aim is to minimize the area above blue and below red line.   
     ![Exemplary Rain Flow histogram](public/histogram_example.png)
 
 6. Damage recalculation - The goal of damage recalculation is to define representative load-range and how many times equivalent block should be repeated in order to correctly recreate the damage of the block. Core principal of damage recalculation is the idea that we can replace couple of cycles (of certain load-range) with cycles of different load-range as long as the resulting damage is the same. This is performed according to Miner’s rule (illustrated by the example below). Following rules are observed during load-range selection for equivalent blocks:
@@ -54,29 +54,27 @@ Equivalent test proposal procedure consist of following steps:
     > **&#9432; Note:**
     > For damage comparison purposes, only slope of the Wohler curve is relevant, range intercept does not influence the comparison between two cycles. Therefore, for damage recalculation purposes, range intercept is always assumed as 1. This results in situation where damage values have no physical interpretation (can be used only for comparison). In such case following equation can be used:
 
-<img src="public/potential_dmg_eq.png?raw=true" alt="Damage equation" width="300"/>
+    <img src="public/potential_dmg_eq.png?raw=true" alt="Damage equation" width="300"/>
 
     where:
         m – Wohler curve slope defined as reciprocal of b value from previous graph
         n – number of cycles
            
- 
-
    > **&#9432; Note:**
    > Practical experience show [1] that when random loading is applied mechanical structures undergo fatigue failure earlier than when only one or two sine signal amplitudes are applied. For this reason, it is recommended to assume that he Miner summation at failure is 0.8 (instead of 1). This results in the safety factor of 1.2 applied on the cycle count of the equivalent signal.
 
 7. Defining mean of the equivalent block - Mean of each equivalent block is established by calculating average value of the mean across all the cycles within given equivalent block. However this approach can result in maximum or minimum value of block, exceeding overall maximum or minimum values of the original signal. In such case, mean value of the equivalent block is corrected so all the blocks are within the bounds of the original signal.
 
-#### Recommended Wohler (S-N) curve slopes
-As described in the previous paragraph, for the comparison purposes the slope of the Wohler curve is important. In order to standardize the processing, Wohler sloped provided in the Table 1 are recommended.
+    #### Recommended Wohler (S-N) curve slopes
+    As described in the previous paragraph, for the comparison purposes the slope of the Wohler curve is important. In order to standardize the processing, Wohler sloped provided in the Table 1 are recommended.
 
-| Material                         | Wohler slope | Sources    |
-| -------------------------------- | ------------ | ---------- |
-| Steel                            | 5            | [2]        |
-| Aluminum                         | 10           | [3]        |
-| Rubber                           | 5            | [4]        |
-| Glass fiber reinforced polyamide | 5            | [5], [6]   |
-| Welds                            | 3            | [Eurocode] |
+    | Material                         | Wohler slope | Sources    |
+    | -------------------------------- | ------------ | ---------- |
+    | Steel                            | 5            | [2]        |
+    | Aluminum                         | 10           | [3]        |
+    | Rubber                           | 5            | [4]        |
+    | Glass fiber reinforced polyamide | 5            | [5], [6]   |
+    | Welds                            | 3            | [Eurocode] |
 
 
 ## Developer Notes
