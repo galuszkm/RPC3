@@ -29,17 +29,14 @@ const DownloadExampleButton: React.FC<DownloadExampleButtonProps> = ({ handleFil
   // File download handler
   const handleDownload = async () => {
     try {
-      const fileUrl = window.location.href + "getExample"; // Proxy route to fetch the file
-      let response = await fetch(fileUrl);
+      const href = window.location.href;
+      const fileUrl = href + href.includes('github.io') ? "SignalExample.rsp" : "getExample"; // Proxy route to fetch the file
+      const response = await fetch(fileUrl);
 
       // Check if response status is ok
       if (!response.ok) {
-        const fileUrl_rsp = window.location.href + "SignalExample.rsp"; // Try to fetch rsp file directly
-        response = await fetch(fileUrl_rsp);
-        if (!response.ok) {
-          toastError(toast);
-          return
-        }
+        toastError(toast);
+        return
       }
       const blob = await response.blob();
       const fileNo = String(files.length+1).padStart(2, "0");
