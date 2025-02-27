@@ -3,10 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RPC3 Viewer</title>
+    <title>Web signal processing</title>
   </head>
   <body>
-    <div id="rpc-viewer"></div>
+    <div id="header">
+      <div style="display: flex; flex-direction: row; width: 100%">
+        <p style="margin-left: 20px; font-size: 16px; flex-grow: 1">
+          Follow the project at <a href="https://github.com/galuszkm/RPC3">Github homepage</a>
+        </p>
+        <p style='float:right; margin-right: 20px; font-size: 16px'>
+          developed by: <a href="https://github.com/galuszkm">Michal Galuszka</a>
+        </p>
+      </div>
+      <hr>
+    </div>
+    <div class="Box" style="margin: 20px">
+      <div id="rpc-viewer"></div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
