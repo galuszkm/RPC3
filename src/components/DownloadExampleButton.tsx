@@ -34,8 +34,12 @@ const DownloadExampleButton: React.FC<DownloadExampleButtonProps> = ({ handleFil
 
       // Check if response status is ok
       if (!response.ok) {
-        toastError(toast);
-        return
+        const fileUrl_rsp = window.location.href + "SignalExample.rsp"; // Try to fetch rsp file directly
+        const response_rsp = await fetch(fileUrl_rsp);
+        if (!response_rsp.ok) {
+          toastError(toast);
+          return
+        }
       }
       const blob = await response.blob();
       const fileNo = String(files.length+1).padStart(2, "0");
