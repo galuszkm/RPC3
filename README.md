@@ -54,7 +54,7 @@ Equivalent test proposal procedure consist of following steps:
     > **&#9432; Note:**
     > For damage comparison purposes, only slope of the Wohler curve is relevant, range intercept does not influence the comparison between two cycles. Therefore, for damage recalculation purposes, range intercept is always assumed as 1. This results in situation where damage values have no physical interpretation (can be used only for comparison). In such case following equation can be used:
 
-<img src="public/potential_dmg_eq.png.PNG?raw=true" alt="Damage equation" width="300"/>
+<img src="public/potential_dmg_eq.png?raw=true" alt="Damage equation" width="300"/>
 
     where:
         m – Wohler curve slope defined as reciprocal of b value from previous graph
