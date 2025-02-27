@@ -1,8 +1,8 @@
 // rainflow.ts
-import { findMinMax, linspace } from './utils';
+import { findMinMax, findMax, findMin, linspace } from './utils';
 import { CumulativeDataType } from './types';
 import { Channel } from './channel';
-import { EventType, RFResultType, CombineChannelsType, HistogramType } from './types';
+import { EventType, RFResultType, CombineChannelsType } from './types';
 import { parseAllRainflowData } from './eq_dmg_signal';
 
 /**
@@ -507,120 +507,133 @@ export function cumulative_rainflow_data(data: Float64Array, slope: number, gate
 }
 
 /**
- * Calculates the level crossing distribution using a weighted histogram approach.
- *
- * This function combines peak and valley values with their repetition counts to
- * build a single weighted dataset. It then splits the range at the mean value
- * to produce two histograms (min→mean, mean→max), merges and inverts counts
- * to form a continuous cumulative curve, and finally inserts an extra cycle at
- * the start and end for boundary conditions.
+ * Calculates the level crossing distribution of a signal (peaks/valleys) by
+ * counting how many times each reference level is crossed, weighted by
+ * repetition counts.
  *
  * @param rfList - An array of Float64Arrays, each storing [peak, valley, ...].
  * @param repetitions - The repetition count for each signal in `rfList`.
  * @param binCount - The number of histogram bins on each side (default = 256).
- * @returns A tuple:
- *  - `[0]`: A Float64Array (`LCcum`) of cumulative crossing counts (with two added boundary points).
- *  - `[1]`: A Float64Array (`LClevel`) of the corresponding level edges (duplicated boundary).
+ * @returns A tuple `[LC, levels]`, where:
+ *  - `LC`: A Float64Array of crossing counts
+ *  - `levels`: A Float64Array of the reference levels
  */
 export function level_crossing( rfList: Float64Array[], repetitions: number[], binCount = 256): [Float64Array, Float64Array] {
   // Get peak/valley and repetition data
   const { maxOfCycle, minOfCycle, cycleRepets } = parseAllRainflowData(rfList, repetitions);
 
-  // Combine peak and valley with their weights (repetitions)
-  const nCycles = maxOfCycle.length;
-  const combined = new Float64Array(nCycles * 2);
-  const weights = new Float64Array(nCycles * 2);
-  combined.set(maxOfCycle, 0);
-  combined.set(minOfCycle, nCycles);
-  weights.set(cycleRepets, 0);
-  weights.set(cycleRepets, nCycles);
+  // Find global min and max of cycles
+  const minVal = findMin(minOfCycle);
+  const maxVal = findMax(maxOfCycle);
 
-  // Single-pass min, max, weighted sum for mean
-  let minVal = combined[0], maxVal = combined[0];
-  let sumVal = 0, totW = 0;
-  for (let i = 0; i < combined.length; i++) {
-    const v = combined[i];
-    const w = weights[i];
-    if (v < minVal) minVal = v;
-    if (v > maxVal) maxVal = v;
-    sumVal += v * w;
-    totW += w;
-  }
-  const meanVal = sumVal / totW;
+  // Create reference levels (sorted ascending)
+  const refLevel = new Float64Array(linspace(minVal, maxVal, binCount));
 
-  // Bin edges
-  const binsPos = new Float64Array(linspace(minVal, meanVal, binCount));
-  const binsNeg = new Float64Array(linspace(meanVal, maxVal, binCount));
+  // Instead of a double loop, we maintain a prefix increment array.
+  // We'll keep the increments in a Float64Array of length `binCount + 1` so
+  // we can mark the end of the range easily without out-of-bounds issues.
+  const prefixInc = new Float64Array(binCount + 1);
 
-  // Weighted histograms
-  const { counts: posCounts, binEdges: posEdges } = histogram(combined, weights, binsPos);
-  const { counts: negCounts, binEdges: negEdges } = histogram(combined, weights, binsNeg);
+  for (let i = 0; i < maxOfCycle.length; i++) {
+    // Determine the lower/upper bounds for this cycle
+    const low = Math.min(maxOfCycle[i], minOfCycle[i]);
+    const high = Math.max(maxOfCycle[i], minOfCycle[i]);
+    const w = cycleRepets[i];
 
-  // Cumulative sums
-  const posCsum = cumulativeSum(posCounts);             // forward
-  const negCsum = cumulativeSum(negCounts).reverse();   // reversed
+    // If the entire cycle range is below the lowest refLevel or above the highest, skip
+    if (high < refLevel[0] || low > refLevel[binCount - 1]) {
+      continue;
+    }
+    // Find the start bin (index) using a lower-bound search
+    const startIdx = findIndexOfFirstGreaterOrEqual(refLevel, low);
+    // Find the end bin (index) using an upper-bound search for 'high'
+    // We subtract 1 because we want the last bin that is still <= high
+    const endIdx = findIndexOfLastLessOrEqual(refLevel, high);
 
-  // Merge cumsums into a single typed array + add "1" at ends
-  const mergedLen = posCsum.length + negCsum.length;
-  const LCcum = new Float64Array(mergedLen + 2);
-  LCcum[0] = 1;
-  LCcum.set(posCsum, 1);
-  LCcum.set(negCsum, 1 + posCsum.length);
-  LCcum[LCcum.length - 1] = 1;
-
-  // Merge bin edges + duplicate first/last
-  const mergedEdges = new Float64Array(mergedLen + 2);
-  mergedEdges[0] = posEdges[0];
-  mergedEdges.set(posEdges.subarray(0, posEdges.length - 1), 1);
-  mergedEdges.set(negEdges.subarray(1), posEdges.length);
-  mergedEdges[mergedEdges.length - 1] = mergedEdges[mergedEdges.length - 2];
-
-  return [LCcum, mergedEdges];
-}
-
-/**
- * Constructs a weighted histogram for the given data and bin edges.
- *
- * Each data value has a corresponding weight, representing how many times
- * that value occurs. The function increments bin counts by those weights
- * instead of just 1.
- *
- * @param data - The Float64Array containing data values (e.g., combined peaks/valleys).
- * @param weights - A Float64Array of the same length, storing weights for each value in `data`.
- * @param bins - The Float64Array of bin edges to classify `data` into.
- * @returns An object containing:
- *  - `counts`: A Float64Array of weighted bin counts.
- *  - `binEdges`: The same bin edges passed in (for convenience).
- */
-function histogram(data: Float64Array, weights: Float64Array, bins: Float64Array): HistogramType {
-  const counts = new Float64Array(bins.length - 1);
-  for (let i = 0; i < data.length; i++) {
-    const x = data[i];
-    const w = weights[i];
-    // Simple linear bin search (fine for moderate binCount)
-    for (let j = 0; j < bins.length - 1; j++) {
-      if (x >= bins[j] && x < bins[j + 1]) {
-        counts[j] += w;
-        break;
-      }
+    // Increment at startIdx, decrement just after endIdx
+    prefixInc[startIdx] += w;
+    if (endIdx + 1 < prefixInc.length) {
+      prefixInc[endIdx + 1] -= w;
     }
   }
-  return { counts, binEdges: bins };
+  // Convert prefix increments to actual counts
+  const counts = new Float64Array(binCount);
+  let running = 0;
+  for (let j = 0; j < binCount; j++) {
+    running += prefixInc[j];
+    counts[j] = running;
+  }
+  // Insert boundary conditions: "1" at first and last crossing count
+  const LC = new Float64Array(binCount + 2);
+  LC[0] = 1;
+  LC.set(counts, 1);
+  LC[LC.length - 1] = 1;
+
+  // Duplicate the first/last level for alignment
+  const levels = new Float64Array(binCount + 2);
+  levels[0] = refLevel[0];
+  levels.set(refLevel, 1);
+  levels[levels.length - 1] = refLevel[binCount - 1];
+
+  // Filter out the duplication of LC
+  // Always keep the first data point
+  const filteredLC: number[] = [LC[0]];
+  const filteredLevels: number[] = [levels[0]];
+
+  // For subsequent points, only keep if LC has changed
+  for (let i = 1; i < LC.length; i++) {
+    if (LC[i] !== LC[i - 1]) {
+      filteredLC.push(LC[i]);
+      filteredLevels.push(levels[i]);
+    }
+  }
+
+  return [
+    new Float64Array(filteredLC),
+    new Float64Array(filteredLevels),
+  ];
 }
 
 /**
- * Computes the cumulative sum of a Float64Array and returns a new array.
+ * Returns the index of the first element in `arr` that is >= `val`
+ * (a typical "lowerBound" function). If all elements in `arr` are
+ * less than `val`, returns `arr.length`.
  *
- * @param arr - A Float64Array of values to be summed in order.
- * @returns A Float64Array where each element is the sum of all preceding
- *          elements in the input, including the current one.
+ * @param arr A sorted Float64Array.
+ * @param val The value to locate.
  */
-function cumulativeSum(arr: Float64Array): Float64Array {
-  const out = new Float64Array(arr.length);
-  let s = 0;
-  for (let i = 0; i < arr.length; i++) {
-    s += arr[i];
-    out[i] = s;
+function findIndexOfFirstGreaterOrEqual(arr: Float64Array, val: number): number {
+  let left = 0;
+  let right = arr.length;
+  while (left < right) {
+    const mid = (left + right) >>> 1;
+    if (arr[mid] >= val) {
+      right = mid;
+    } else {
+      left = mid + 1;
+    }
   }
-  return out;
+  return left;
+}
+
+/**
+ * Returns the index of the last element in `arr` that is <= `val`.
+ * If all elements in `arr` are greater than `val`, returns -1.
+ *
+ * @param arr A sorted Float64Array.
+ * @param val The value to locate.
+ */
+function findIndexOfLastLessOrEqual(arr: Float64Array, val: number): number {
+  let left = 0;
+  let right = arr.length; // exclusive
+  while (left < right) {
+    const mid = (left + right) >>> 1;
+    if (arr[mid] <= val) {
+      // This mid is good, but there might be more to the right
+      left = mid + 1;
+    } else {
+      right = mid;
+    }
+  }
+  return left - 1;
 }

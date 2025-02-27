@@ -44,8 +44,3 @@ export type EquivalentSignalRow = [
   number, // damage
   number, // average_mean_for_block
 ];
-
-export interface HistogramType {
-  counts: Float64Array;
-  binEdges: Float64Array;
-}

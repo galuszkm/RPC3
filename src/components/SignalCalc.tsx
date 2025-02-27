@@ -30,7 +30,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const [gate, setGate] = useState(5);
   const [blockNo, setBlockNo] = useState(5);
   const [minNoCycles, setMinNoCycles] = useState(250e3);
-  const [combine, setCombine] = useState(false);
+  const [combine, setCombine] = useState(true);
   const [displayEvents, setDisplayEvents] = useState<EventType[]>([]);
   const [displayEqSignals, setDisplayEqSignals] = useState(true);
   
@@ -75,8 +75,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   // MIDDLEWARES
 
   const clearStates = () => {
-    [
-      setRange, setName, setNcum, setDcum, setLcX, setLcY, setDamage,
+    [ setRange, setName, setNcum, setDcum, setLcX, setLcY, setDamage,
       setEqSignalNames, setEqSignalUnits, setEqSignals,
     ].forEach(set => set([]));
   }
@@ -106,18 +105,19 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         postErrorClipboard("Clipboard is empty", "No text data found in clipboard.");
         return;
       }
-      const validEventNames = new Set(Object.values(events).map(i => i.name)); // Use Set for faster lookup
+      const validEventNames = new Set(Object.values(displayEvents).map(i => i.name)); // Use Set for faster lookup
       const lines = text.split(/\r?\n/); // Split into lines
       const reps = lines.map((line) => {
         // Try different separators (tab, semicolon, colon, comma)
-        const parts = line.split(/[\t;:,]/).map((part) => part.trim());
+        const parts = line.split(/[\t;:,]+/).map(part => part.trim());
         if (parts.length >= 2) {
           let [nameStr, repetitionsStr] = parts;
           const name = nameStr.includes('.') ? nameStr.split('.')[0] : nameStr; // Handle dot separation
-          const repetitions = parseInt(repetitionsStr, 10);
-  
+          const repetitions = parseInt(repetitionsStr.replace(' ', ''), 10);
           if (!isNaN(repetitions) && validEventNames.has(name)) {
             return { name, repetitions };
+          } else {
+            console.warn(`Pasted line not valid:\n${line}`)
           }
         }
         return null;
@@ -128,7 +128,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         postErrorClipboard("Format error", "Could not set repetitions. Incorrect data format.")
       }
       // Set repetitions to events
-      Object.values(events).forEach((e) => {
+      Object.values(displayEvents).forEach((e) => {
         const r = reps.find((i) => i?.name === e.name);
         if (r) {
           setEvent({ ...e, repetitions: r.repetitions });
@@ -184,7 +184,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     }
   }
 
-  const calcLC = (channels: Channel[]) => {
+  const calcLC = (channels: Channel[]): [Float64Array, Float64Array] => {
     // Collect Channels rainflow cycles and repetitions
     const cycles = channels.map(c => c.cycles);
     const repetitions = channels.map(c => c.repetitions);
@@ -271,20 +271,20 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     const __ncum__: Float64Array[] = [];
     const __dcum__: Float64Array[] = [];
     const __damage__: number[] = [];
-    const __lcx__: Float64Array[] = [];
-    const __lcy__: Float64Array[] = [];
+    const __lcX__: Float64Array[] = [];
+    const __lcY__: Float64Array[] = [];
 
     for (let c of channelGroups) {
       const [channelName, range_counts, dmg, channels] = c;
       const { range, ncum, dcum } = cumulative_rainflow_data(range_counts, slope, gate);
-      const [lcx, lcy] = calcLC(channels);
+      const lc = calcLC(channels);
       __name__.push(channelName);
       __range__.push(range);
       __ncum__.push(ncum);
       __dcum__.push(dcum);
       __damage__.push(dmg);
-      __lcx__.push(lcx);
-      __lcy__.push(lcy);
+      __lcX__.push(lc[0]);
+      __lcY__.push(lc[1]);
     }
 
     // Calculate equivalent block signals
@@ -310,8 +310,8 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     setNcum(__ncum__);
     setDcum(__dcum__);
     setDamage(__damage__);
-    setLcX(__lcx__);
-    setLcY(__lcy__);
+    setLcX(__lcX__);
+    setLcY(__lcY__);
   }
 
   const handleClose = () => {
