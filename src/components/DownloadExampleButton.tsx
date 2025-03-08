@@ -30,7 +30,7 @@ const DownloadExampleButton: React.FC<DownloadExampleButtonProps> = ({ handleFil
   const handleDownload = async () => {
     try {
       const href = window.location.href;
-      const fileUrl = href + href.includes('github.io') ? "SignalExample.rsp" : "getExample"; // Proxy route to fetch the file
+      const fileUrl = href + (href.includes('github.io') ? "SignalExample.rsp" : "getExample"); // Proxy route to fetch the file
       const response = await fetch(fileUrl);
 
       // Check if response status is ok
