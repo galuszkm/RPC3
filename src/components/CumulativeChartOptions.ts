@@ -52,11 +52,17 @@ export const fixedOptions = {
   },
   toolbox: {
     feature: {
-      dataZoom: { yAxisIndex: false },
+      // filterMode 'none': keep points outside the zoom window so lines run to the plot edge
+      dataZoom: { yAxisIndex: false, filterMode: "none" },
       saveAsImage: { pixelRatio: 2 },
       dataView: { show: true },
     },
     right: 255,
+    // Match ECharts 5 layout/colors so icons line up with the extra toolbox icon
+    padding: 5,
+    itemGap: 8,
+    iconStyle: { borderColor: "rgb(99, 99, 99)" },
+    emphasis: { iconStyle: { borderColor: "rgb(79, 161, 202)" } },
   },
   tooltip: {
     trigger: "axis",
@@ -65,9 +71,10 @@ export const fixedOptions = {
   grid: {
     left: 50, right: 260, top: 35, bottom: 80, containLabel: true
   },
+  // filterMode 'none': don't drop data outside the window, so lines aren't cut short at the zoom edges
   dataZoom: [
-    { type: "inside", xAxisIndex: [0] },
-    { type: "slider", xAxisIndex: [0] }
+    { type: "inside", xAxisIndex: [0], filterMode: "none" },
+    { type: "slider", xAxisIndex: [0], filterMode: "none" }
   ],
   xAxis: {
     type: "value",

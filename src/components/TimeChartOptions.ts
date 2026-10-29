@@ -50,6 +50,11 @@ export const fixedOptions = {
     },
     toolbox: {
       right: 20,
+      // Match ECharts 5 layout/colors so icons line up with the extra toolbox icon
+      padding: 5,
+      itemGap: 8,
+      iconStyle: { borderColor: "rgb(99, 99, 99)" },
+      emphasis: { iconStyle: { borderColor: "rgb(79, 161, 202)" } },
       feature: {
         dataZoom: { yAxisIndex: false },
         saveAsImage: { pixelRatio: 2 },
