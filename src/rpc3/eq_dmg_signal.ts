@@ -1,5 +1,5 @@
 import { findMax, findMin } from "./utils";
-import { RainflowDataColumns, EquivalentSignalRow } from "./types";
+import type { RainflowDataColumns, EquivalentSignalRow } from "./types";
 
 /**
  * Parses multiple signals of rainflow peak/valley pairs into a column-based structure.
@@ -73,11 +73,11 @@ export function parseAllRainflowData(rfList: Float64Array[], repetitions: number
       const valley = arr[j + 1];
 
       const r = Math.abs(peak - valley);
-      const mx = peak > valley ? peak : valley;
-      const mn = peak < valley ? peak : valley;
+      const mx = Math.max(peak , valley);
+      const mn = Math.min(peak , valley);
 
       // damage = repets * (range^slope)
-      const dmg = slope ? signalRepeats * Math.pow(r, slope) : 0;
+      const dmg = slope ? signalRepeats * r ** slope : 0;
       range[fillPosition] = r;
       damageOfCycle[fillPosition] = dmg;
       cumulDamage[fillPosition] = 0; // temporarily 0, to be filled later
@@ -309,7 +309,6 @@ function buildEquivalentSignalBlocks(
     const upperIdx = blocksIndexed[b + 1];
     
     let blockDamage = 0;
-    let sumOfMaxes = 0;
     let sumOfMeans = 0;
     let numberOfCycles = 0;
 
@@ -319,7 +318,6 @@ function buildEquivalentSignalBlocks(
     for (let i = lowerIdx+1; i <= upperIdx; i++) {
       blockDamage += columns.damageOfCycle[i];
       finalRange = columns.range[i];
-      sumOfMaxes += columns.maxOfCycle[i];
       sumOfMeans += (columns.maxOfCycle[i] - columns.range[i] / 2.0);
       numberOfCycles++;
     }
@@ -330,7 +328,7 @@ function buildEquivalentSignalBlocks(
       eqSignal.push([
         finalRange,                                   // range
         blockMean,                                    // mean
-        blockDamage / Math.pow(finalRange, slope),    // repetition
+        blockDamage / finalRange ** slope,    // repetition
         (blockDamage * 100) / totalDamage,            // % damage
         blockDamage,                                  // blockDamage
         blockMean,                                    // ave mean for block
@@ -425,7 +423,7 @@ function scaleEquivalentSignalToMinimumCycles(
     for (const row of eqSignal) {
       const range = row[0];
       const blockDamage = row[4]; // row[4] => blockDamage
-      const rep = blockDamage / Math.pow(range, slope);
+      const rep = blockDamage / range ** slope;
       row[2] = rep;
       row[3] = (blockDamage * 100) / totalDamage;
     }
@@ -461,9 +459,7 @@ function adjustBlockMeansToGlobalMinMax(eqSignal: EquivalentSignalRow[]): void {
   const minOfTheSignal = lastMean - lastRange;
   const maxOfTheSignal = lastMean;
 
-  let blockNumber = 0;
   for (const row of eqSignal) {
-    blockNumber++;
     // if (mean - range/2) < minOfSignal => shift up
     if (row[5] - row[0] / 2 < minOfTheSignal) {
       row[5] = (row[0] / 2.0) + minOfTheSignal;

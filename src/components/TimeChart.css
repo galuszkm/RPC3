@@ -6,7 +6,6 @@
 
 .time-chart-container {
     width: 100%;
-    height: 100% !important; /* override echarts-for-react's default 300px */
 }
 
 /* EXTRA CHART TOOLBOX BUTTON */
@@ -29,7 +28,9 @@
 
 /* Style the tooltip text */
 .extra-toolbox-button-tooltip.p-tooltip > .p-tooltip-text {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     background-color: transparent !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     box-shadow: none !important;
     color: rgb(79,161,202);
     font-family: sans-serif;

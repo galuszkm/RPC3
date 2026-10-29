@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, RefObject, lazy, Suspense } from "react";
+import { useEffect, useMemo, useState, useRef, type RefObject, lazy, Suspense } from "react";
 import { useChannels } from "../context/ChannelsContext";
 import { useEvents } from "../context/EventContext";
 import { Dialog } from "primereact/dialog";
@@ -8,13 +8,16 @@ import { SelectButton } from "primereact/selectbutton";
 import { Tooltip } from 'primereact/tooltip';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { 
-  Channel, EventType, calcDamage, eqDmgSignal, level_crossing,
+  Channel, type EventType, calcDamage, eqDmgSignal, level_crossing,
   cumulative_rainflow_data, combine_channels_range_counts,
-  EquivalentSignalRow, prettyNumberFormat, eqDmgSignalCumulative,
+  type EquivalentSignalRow, prettyNumberFormat, eqDmgSignalCumulative,
 } from "../rpc3";
 import "./SignalCalc.css";
 
 const CumulativeChart = lazy(() => import("./CumulativeChart"));
+
+const NO_EQ_SIGNALS: [number[], number[]][] = [];
+const NO_NAMES: string[] = [];
 
 interface SignalCalcProps {
   open: boolean;
@@ -50,6 +53,18 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const { channels } = useChannels();
   const { events, setEvent } = useEvents();
 
+  // Eq. block signals as cumulative chart series; memoized so charts only update when results change
+  const rangeMin = useMemo(() => Math.min(...range.map(i => i[i.length-1])), [range]);
+  const eqCumCycles = useMemo(
+    () => displayEqSignals ? eqSignals.map(i => eqDmgSignalCumulative(i, 'cycles', rangeMin)) : NO_EQ_SIGNALS,
+    [displayEqSignals, eqSignals, rangeMin],
+  );
+  const eqCumDamage = useMemo(
+    () => displayEqSignals ? eqSignals.map(i => eqDmgSignalCumulative(i, 'damage', rangeMin)) : NO_EQ_SIGNALS,
+    [displayEqSignals, eqSignals, rangeMin],
+  );
+  const eqNamesShown = displayEqSignals ? eqSignalNames : NO_NAMES;
+
   // Update `events` only when `open` is true and `channels` change
   useEffect(() => {
     if (open) {
@@ -77,7 +92,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const clearStates = () => {
     [ setRange, setName, setNcum, setDcum, setLcX, setLcY, setDamage,
       setEqSignalNames, setEqSignalUnits, setEqSignals,
-    ].forEach(set => set([]));
+    ].forEach(set => { set([]); });
   }
 
   // Handle event repetitions change
@@ -111,10 +126,10 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
         // Try different separators (tab, semicolon, colon, comma)
         const parts = line.split(/[\t;:,]+/).map(part => part.trim());
         if (parts.length >= 2) {
-          let [nameStr, repetitionsStr] = parts;
+          const [nameStr, repetitionsStr] = parts;
           const name = nameStr.includes('.') ? nameStr.split('.')[0] : nameStr; // Handle dot separation
           const repetitions = parseInt(repetitionsStr.replace(' ', ''), 10);
-          if (!isNaN(repetitions) && validEventNames.has(name)) {
+          if (!Number.isNaN(repetitions) && validEventNames.has(name)) {
             return { name, repetitions };
           } else {
             console.warn(`Pasted line not valid:\n${line}`)
@@ -155,9 +170,9 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
   const postErrorCalculations = (toast: RefObject<Toast | null>, title: string, chanName: string, evName?: string, error?: string) => {
     const messageElement = () => (
       <div className="toast-error-calculate">
-        {error ? <span>{error}<br/></span>: <></>}
+        {error ? <span>{error}<br/></span> : null}
         <b>Channel: {chanName}</b><br/>
-        {evName ? <b>Event: {evName}</b> : <></>}
+        {evName ? <b>Event: {evName}</b> : null}
       </div>
     )
     toast.current?.show({
@@ -240,7 +255,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     channels.forEach(c => {
       try {
         c.clearRF();
-        c.rainflow(displayEvents.find(i => i.hash == c.fileHash)?.repetitions || 1, !combine)
+        c.rainflow(displayEvents.find(i => i.hash === c.fileHash)?.repetitions || 1, !combine)
       } catch (error) {
         console.error(error)
         postErrorCalculations(toast, 'Rainflow counting failed!', c.Name, c.filename);
@@ -274,7 +289,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     const __lcX__: Float64Array[] = [];
     const __lcY__: Float64Array[] = [];
 
-    for (let c of channelGroups) {
+    for (const c of channelGroups) {
       const [channelName, range_counts, dmg, channels] = c;
       const { range, ncum, dcum } = cumulative_rainflow_data(range_counts, slope, gate);
       const lc = calcLC(channels);
@@ -355,8 +370,9 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
     <div className="controls-box">
       {/* Wohler slope */}
       <div className="input-block">
-        <label>Wöhler slope</label>
+        <label htmlFor="calc-slope">Wöhler slope</label>
         <input
+          id="calc-slope"
           name="slope"
           type="number"
           min={1}
@@ -369,14 +385,15 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
       </div>
       {/* Gate */}
       <div className="input-block">
-        <label>Gate [%]</label>
+        <label htmlFor="calc-gate">Gate [%]</label>
         <input
+          id="calc-gate"
           name="gate"
           type="number"
           min={0}
           max={20}
           value={gate}
-          onChange={(event) => setGate(Number(event.target.value) > 20 ? 20 : Number(event.target.value))}
+          onChange={(event) => setGate(Math.min(Number(event.target.value), 20))}
         />
         <span className="tip">
           Skip cycles with lower force range
@@ -384,14 +401,15 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
       </div>
       {/* Number of blocks */}
       <div className="input-block">
-        <label>Block No</label>
+        <label htmlFor="calc-no-blocks">Block No</label>
         <input
+          id="calc-no-blocks"
           name="no-blocks"
           type="number"
           min={0}
           max={15}
           value={blockNo}
-          onChange={(event) => setBlockNo(Number(event.target.value) > 15 ? 15 : Number(event.target.value))}
+          onChange={(event) => setBlockNo(Math.min(Number(event.target.value), 15))}
         />
         <span className="tip">
           Number of blocks in equivalent signal
@@ -399,8 +417,9 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
       </div>
       {/* Min number of cycle */}
       <div className="input-block">
-        <label>Min cycles</label>
+        <label htmlFor="calc-min-cycles">Min cycles</label>
         <input
+          id="calc-min-cycles"
           name="min-cycles"
           type="number"
           min={1e4}
@@ -459,7 +478,7 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
           </thead>
           <tbody>
             {eqSignal.map((i, idx) => (
-              <tr key={idx+i[0]+i[1]+i[4]}>
+              <tr key={`${i[0]}-${i[1]}-${i[2]}`}>
                 <td key="id"      className="id"     >{idx+1}</td>
                 <td key="max"     className="max"    >{prettyNumberFormat(i[1] + i[0]/2, 2)}</td>
                 <td key="min"     className="min"    >{prettyNumberFormat(i[1] - i[0]/2, 2)}</td>
@@ -518,12 +537,11 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
 
   const renderTabChart = () => {
     const rangeUnits = [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", ");
-    const rangeMin = Math.min(...range.map(i => i[i.length-1]));
     return (
       <div className="chart">
         <TabView activeIndex={activeIndexChart} onTabChange={(e) => setActiveIndexChart(e.index)}>
           <TabPanel key="cum-cycles" className="tab-panel" header="Cumulative Cycles">
-            <Suspense fallback={<></>}>
+            <Suspense fallback={null}>
               <CumulativeChart 
                 key={String(displayEqSignals)}
                 x={ncum} 
@@ -532,13 +550,13 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
                 xTypeLog={true}
                 xLabel="Cumulative cycles [-]" 
                 yLabel={`Range ${rangeUnits}`}
-                eqSignals={displayEqSignals ? eqSignals.map(i => eqDmgSignalCumulative(i, 'cycles', rangeMin)) : []}
-                eqSignalsName={displayEqSignals ? eqSignalNames : []}
+                eqSignals={eqCumCycles}
+                eqSignalsName={eqNamesShown}
               />
              </Suspense>
           </TabPanel>
           <TabPanel key="cum-damage" className="tab-panel" header="Percentage of total damage">
-            <Suspense fallback={<></>}>
+            <Suspense fallback={null}>
               <CumulativeChart
                 key={String(displayEqSignals)}
                 x={dcum} 
@@ -547,13 +565,13 @@ export default function SignalCalc({ open, setOpen }: SignalCalcProps) {
                 xTypeLog={false}
                 xLabel="Percentage of total damage [%]" 
                 yLabel={`Range ${rangeUnits}`}
-                eqSignals={displayEqSignals ? eqSignals.map(i => eqDmgSignalCumulative(i, 'damage', rangeMin)) : []}
-                eqSignalsName={displayEqSignals ? eqSignalNames : []}
+                eqSignals={eqCumDamage}
+                eqSignalsName={eqNamesShown}
               />
              </Suspense>
           </TabPanel>
           <TabPanel key="lc" className="tab-panel" header={<div style={{marginRight: '0.7rem'}}>Level crossing</div>}>
-            <Suspense fallback={<></>}>
+            <Suspense fallback={null}>
               <CumulativeChart
                 key={String(displayEqSignals)}
                 x={lcX} 

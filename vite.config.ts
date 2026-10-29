@@ -12,6 +12,8 @@ export default defineConfig({
     assetsDir: '',    // Place assets in the same directory as index.html
     sourcemap: false,
     emptyOutDir: true,
+    // One stylesheet for the whole app instead of a CSS file per lazy-loaded chunk
+    cssCodeSplit: false,
     rollupOptions: {
       output: {
         entryFileNames: 'js/[name].js',   // No subfolder for entry files
@@ -24,7 +26,7 @@ export default defineConfig({
             return 'img/[name][extname]'
           }
           if (/\.css$/.test(name ?? '')) {
-            return 'css/[name][extname]' // Ensures CSS goes into 'css/' folder
+            return 'css/styles.css' // Single stylesheet (cssCodeSplit: false)
           }
           if (/\.js$/.test(name ?? '')) {
             return 'js/[name][extname]' // Ensures CSS goes into 'css/' folder

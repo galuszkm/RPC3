@@ -1,5 +1,6 @@
-import React, { createContext, useReducer, useContext, ReactNode } from "react";
-import { Channel } from "../rpc3";
+import type React from "react";
+import { createContext, useReducer, useContext, type ReactNode } from "react"
+import type { Channel } from "../rpc3";
 
 // Type definitions
 interface ChannelState {
@@ -15,9 +16,10 @@ const channelsReducer = (state: ChannelState, action: ChannelsAction): ChannelSt
   switch (action.type) {
     case "SET_CHANNELS":
       return { channels: [...action.payload] };
-    case "REMOVE_CHANNELS_BY_FILEHASH":
+    case "REMOVE_CHANNELS_BY_FILEHASH": {
       const updatedChannels = state.channels.filter(i => i.fileHash !== action.payload);
       return { channels: [...updatedChannels] };
+    }
     default:
       return state;
   }
@@ -47,6 +49,7 @@ export const ChannelsProvider: React.FC<{ children: ReactNode }> = ({ children }
 };
 
 // Custom hook for using context
+// biome-ignore lint/style/useComponentExportOnlyModules: the context hook lives next to its provider
 export const useChannels = (): ChannelContextType => {
   const context = useContext(ChannelContext);
   if (!context) {

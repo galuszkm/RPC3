@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 const TooltipIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => {
   return (
@@ -9,6 +9,8 @@ const TooltipIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => {
     x="0px" y="0px" 
     xmlnsXlink="http://www.w3.org/1999/xlink"
     viewBox="0 0 122.88 122.88" 
+    role="img"
+    aria-label="Toggle pointer"
     {...props} // Spread props to allow customization
     >
     <g>

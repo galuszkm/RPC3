@@ -1,3 +1,13 @@
+import type { ECOption } from "./charts/echartsCore";
+
+// The fields of ECharts' axis-tooltip params that the formatter uses
+export interface AxisTooltipParam {
+  axisValue: number;
+  marker: string;
+  seriesName: string;
+  value: number[];
+}
+
 const formatTooltipRow = (marker: string, seriesName: string, value: number) => {
   return `
     <div style="
@@ -12,7 +22,7 @@ const formatTooltipRow = (marker: string, seriesName: string, value: number) => 
   `;
 };
 
-export const tooltipFormatter = (params: any, xTitle: string) => {
+export const tooltipFormatter = (params: AxisTooltipParam[], xTitle: string) => {
   // Extract unit from `xTitle` using regex
   const unitMatch = xTitle.match(/\[(.*?)\]$/);
   const unit = unitMatch ? unitMatch[1].replace('-', '') : "";
@@ -29,7 +39,7 @@ export const tooltipFormatter = (params: any, xTitle: string) => {
     ${name}: ${xValue}${unit}
     </div>
   `;
-  params.forEach((param: any) => {
+  params.forEach((param) => {
     // Use the helper function to format each row
     tooltipText += formatTooltipRow(param.marker, param.seriesName, param.value[1],);
   });
@@ -38,7 +48,8 @@ export const tooltipFormatter = (params: any, xTitle: string) => {
 };
 
 export const fixedOptions = {
-  title: {},
+  // Accessible text description of the chart (series names), also used by e2e tests
+  aria: { enabled: true },
   legend: {
     show: true,
     orient: "vertical",
@@ -132,5 +143,5 @@ export const fixedOptions = {
     },
   },
   series: [] // Placeholder for dynamic series update
-};
+} satisfies ECOption;
   

@@ -1,7 +1,8 @@
-import React, { RefObject } from "react";
+import type React from "react";
+import type { RefObject } from "react";
 import { Button } from "primereact/button";
-import { Toast } from "primereact/toast";
-import { RPC } from "../rpc3";
+import type { Toast } from "primereact/toast";
+import type { RPC } from "../rpc3";
 import { useFiles } from "../context/FilesContext";
 import { useEvents } from "../context/EventContext";
 import "./DownloadExampleButton.css";
@@ -48,7 +49,7 @@ const DownloadExampleButton: React.FC<DownloadExampleButtonProps> = ({ handleFil
       if (rpc){
         // Scale all channels values to introduce some randomness
         // Scale factor is random float in range 1 to 3
-        rpc?.Channels.forEach(c => c.scaleValue(Math.random()*(3-1)+1));
+        rpc?.Channels.forEach(c => { c.scaleValue(Math.random()*(3-1)+1); });
         // Add rpc to events with default repetititons 20k
         setEvent({
           name: rpc.fileName, 

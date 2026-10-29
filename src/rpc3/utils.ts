@@ -69,7 +69,7 @@ export function normalizeInt16(array: Float64Array): [Int16Array, number] {
   const absmaxValue = Math.max(max, Math.abs(max));
 
   // Normalization factor
-  const factor = absmaxValue / (Math.pow(2, 15) - 1);
+  const factor = absmaxValue / (2 ** 15 - 1);
 
   // Normalize array
   const normalizedArray = new Int16Array(array.map(value => Math.round(value / factor)));
@@ -82,7 +82,7 @@ export const formatFileSize = (bytes: number): string => {
 
   const units = ["B", "kB", "MB", "GB", "TB"];
   const exponent = Math.floor(Math.log10(bytes) / 3); // Find the correct unit index
-  const value = bytes / Math.pow(1000, exponent); // Convert bytes to unit
+  const value = bytes / 1000 ** exponent; // Convert bytes to unit
 
   return `${value.toFixed(value < 10 ? 2 : 1)} ${units[exponent]}`; // Keep 2 decimals for <10, otherwise 1
 };
@@ -127,7 +127,7 @@ export function calcDamage(slope: number, range_counts: Float64Array): number {
   for (let i = 0; i < range_counts.length; i += 2) {
     const range = range_counts[i];        // Range value
     const count = range_counts[i + 1];    // Count value
-    totalDamage += Math.pow(range, slope) * count;
+    totalDamage += range ** slope * count;
   }
 
   return totalDamage;

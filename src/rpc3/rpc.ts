@@ -102,7 +102,7 @@ export class RPC {
   
         // Return the parsed header name, value, and the new offset
         return [headStr, valStr, offset + 128];
-      } catch (e) {
+      } catch {
         this.Errors.push(
           'Header of the file does not contain sufficient data to read 128 bytes'
         );
@@ -235,11 +235,11 @@ export class RPC {
     for (let idx = 0; idx < this.Headers.CHANNELS; idx++) {
       let scaleFactor = 1.0;
       if (dataTypeInHeader === 'SHORT_INTEGER') {
-        scaleFactor = parseFloat(String(this.Headers['SCALE.CHAN_' + (idx + 1)]));
+        scaleFactor = parseFloat(String(this.Headers[`SCALE.CHAN_${idx + 1}`]));
       }
       //  Channel name and units
-      const name = String(this.Headers['DESC.CHAN_' + (idx + 1)]);
-      const units = String(this.Headers['UNITS.CHAN_' + (idx + 1)]);
+      const name = String(this.Headers[`DESC.CHAN_${idx + 1}`]);
+      const units = String(this.Headers[`UNITS.CHAN_${idx + 1}`]);
       
       // Create Channel instance and add to collection
       const channelObj = new Channel(
@@ -266,14 +266,14 @@ export class RPC {
 
     // Recreate structure of demultiplexed data
     const frames_per_group = parseInt(String(point_per_group / point_per_frame), 10);
-    const number_of_groups = parseInt(String(Math.ceil(frames / frames_per_group)));
+    const number_of_groups = parseInt(String(Math.ceil(frames / frames_per_group)), 10);
     const data_order = [];
     let frame_no = 1;
     let removeLastFrame = false;
 
     for (let i=0; i<number_of_groups; i++){
       if (frame_no > frames) { removeLastFrame=true }
-      let temp = []
+      const temp = []
       for (let j=0; j<frames_per_group; j++){
         if (frame_no > frames) { removeLastFrame=true }
         temp.push(frame_no)
@@ -310,10 +310,10 @@ export class RPC {
     let idx = Number(this.Headers.NUM_HEADER_BLOCKS)*512;
     const writeIndex = Array(channels).fill(0);
 
-    for (let frame_group of data_order) {
+    for (const frame_group of data_order) {
       for (let channel = 0; channel < channels; channel++) {
         // Set scale factor (use channel scale if data type is SHORT INTEGER)
-        let scale_factor = dataType === 'SHORT_INTEGER' ? this.Channels[channel].scale : 1.0;
+        const scale_factor = dataType === 'SHORT_INTEGER' ? this.Channels[channel].scale : 1.0;
   
         // Unpack all frames with struct pkg
         for (let frame = 0; frame < frame_group.length; frame++) {
@@ -401,7 +401,7 @@ export class RPC {
       HEADER = Buffer.concat([HEADER, keyBuffer, valueBuffer]);
     }
 
-    const headerLen = 512 * parseInt(values[1]);
+    const headerLen = 512 * parseInt(values[1], 10);
     HEADER = Buffer.concat([HEADER, Buffer.alloc(headerLen - HEADER.length)]);
     
     return HEADER;
@@ -415,7 +415,7 @@ export class RPC {
           const lastItem = d[d.length - 1] 
           const padding = PTS_PER_GROUP - d.length;
 
-          let data2pad = []
+          const data2pad = []
           for (let i=0; i<padding; i++) data2pad.push(lastItem)
           const intData = new Int16Array(data2pad);
 

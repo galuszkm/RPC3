@@ -1,6 +1,7 @@
 
-import React, { createContext, useReducer, useContext, ReactNode } from "react";
-import { EventType } from "../rpc3";
+import type React from "react";
+import { createContext, useReducer, useContext, type ReactNode } from "react"
+import type { EventType } from "../rpc3";
 
 // Updated state type
 interface EventState {
@@ -58,6 +59,7 @@ export const EventsProvider: React.FC<{ children: ReactNode }> = ({ children }) 
 };
 
 // Custom hook for using context
+// biome-ignore lint/style/useComponentExportOnlyModules: the context hook lives next to its provider
 export const useEvents = (): EventContextType => {
   const context = useContext(EventContext);
   if (!context) {

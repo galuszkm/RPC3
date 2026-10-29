@@ -1,8 +1,8 @@
 // rainflow.ts
 import { findMinMax, findMax, findMin, linspace } from './utils';
-import { CumulativeDataType } from './types';
-import { Channel } from './channel';
-import { EventType, RFResultType, CombineChannelsType } from './types';
+import type { CumulativeDataType } from './types';
+import type { Channel } from './channel';
+import type { EventType, RFResultType, CombineChannelsType } from './types';
 import { parseAllRainflowData } from './eq_dmg_signal';
 
 /**
@@ -322,7 +322,7 @@ export function count_range_cycles(cycles: Float64Array, repets: number=1): Floa
   let index = 0;
   for (const r of uniqueRanges) {
     result[index++] = r;
-    result[index++] = rangeMap.get(r)!; // Store count
+    result[index++] = rangeMap.get(r) ?? 0; // Store count
   }
 
   return result;
@@ -359,7 +359,7 @@ export function count_unique_ranges(range_counts: Float64Array): Float64Array {
   let index = 0;
   for (const r of uniqueRanges) {
     result[index++] = r;
-    result[index++] = rangeMap.get(r)!; // Store merged count
+    result[index++] = rangeMap.get(r) ?? 0; // Store merged count
   }
 
   return result;
@@ -460,19 +460,19 @@ export function cumulative_rainflow_data(data: Float64Array, slope: number, gate
 
   // Extract and sort unique ranges
   const uniqueRanges = Array.from(rangeMap.keys()).sort((a, b) => b - a);
-  let len = uniqueRanges.length;
+  const len = uniqueRanges.length;
 
   // Allocate typed arrays
   const uniqueCycles = new Float64Array(len);
   for (let i = 0; i < len; i++) {
-    uniqueCycles[i] = rangeMap.get(uniqueRanges[i])!;
+    uniqueCycles[i] = rangeMap.get(uniqueRanges[i]) ?? 0;
   }
 
   // Compute damage array = (range^slope) * cycles
   const damageArray = new Float64Array(len);
   let damageSum = 0;
   for (let i = 0; i < len; i++) {
-    damageArray[i] = Math.pow(uniqueRanges[i], slope) * uniqueCycles[i];
+    damageArray[i] = uniqueRanges[i] ** slope * uniqueCycles[i];
     damageSum += damageArray[i];
   }
 

@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from "react";
+import type React from "react";
+import { useMemo, useState } from "react";
 import { FilterMatchMode, FilterOperator } from "primereact/api";
-import { DataTable, DataTableFilterMeta, DataTableRowClickEvent, DataTableSelectionMultipleChangeEvent } from "primereact/datatable";
+import { DataTable, type DataTableFilterMeta, type DataTableRowClickEvent, type DataTableSelectionMultipleChangeEvent } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from 'primereact/inputtext';
 import { IconField } from 'primereact/iconfield';
@@ -8,7 +9,7 @@ import { InputIcon } from 'primereact/inputicon';
 import { Button } from "primereact/button";
 import { useFiles } from "../context/FilesContext";
 import { useChannels } from "../context/ChannelsContext";
-import { Channel } from "../rpc3/src/channel";
+import type { Channel } from "../rpc3";
 import "./ChannelTable.css";
 
 interface ChannelType {
@@ -62,7 +63,7 @@ const ChannelTable: React.FC = () => {
   // Handle global filter change
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    let _filters = { ...filters };
+    const _filters = { ...filters };
     if ('value' in _filters.global){
       _filters.global.value = value;
     }
@@ -85,7 +86,7 @@ const ChannelTable: React.FC = () => {
   }
 
   const handleRowClick = (e: DataTableRowClickEvent) => {
-    let selected = [...selectedChannels];
+    const selected = [...selectedChannels];
     const rowData = e.data as ChannelType;
     const selectedIndex = selected.findIndex((item) => item.id === rowData.id);
 

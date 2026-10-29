@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useChannels } from "../context/ChannelsContext";
-import ReactECharts, { EChartsInstance } from "echarts-for-react";
+import { echarts, ReactECharts, type EChartsInstance } from "./charts/echartsCore";
 
 import { fixedOptions } from "./TimeChartOptions";
-import { Channel } from "../rpc3";
+import type { Channel } from "../rpc3";
 import TooltipIcon from "../icons/TooltipIcon";
 import { Tooltip } from "primereact/tooltip";
 import "./TimeChart.css";
 
 const CHART_OPTS = { width: 'auto', height: 'auto' } as const;
+const CHART_STYLE = { height: '100%' };
 
 const generateData = (c: Channel) => {
   const len = c.value.length;
@@ -34,6 +35,14 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
   // Get channels from context
   const { channels } = useChannels();
 
+  // Fit the chart height to its wrapper
+  const resizeChart = useCallback(() => {
+    if (chart && !chart.isDisposed() && wrapperRef.current) {
+      const wrapperHeight = wrapperRef.current.getBoundingClientRect().height;
+      chart.resize({height: wrapperHeight});
+    }
+  }, [chart]);
+
   // Bind double click event handler to chart ref
   useEffect(() => {
     if (!chart) return;
@@ -57,7 +66,7 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
         chartInstance.getZr()?.off("dblclick", handleDoubleClick);
       }
     };
-  }, [chart]);
+  }, [chart, resizeChart]);
 
   // **Effect to Update Series & Y-Axis Name Dynamically**
   useEffect(() => {
@@ -85,10 +94,7 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
             ...fixedOptions.yAxis, 
             name: [...new Set(channels.map(c => c.Units))].map(i=>`[${i}]`).join(", "),
           },
-          tooltip: {
-            ...fixedOptions.tooltip,
-            show: pointerActive,
-          }
+          // Tooltip visibility is managed by the pointer effect below and kept by merge
         },
         {
           notMerge: false,
@@ -114,16 +120,10 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
   }, [chart, pointerActive])
 
   // **Resize Chart When Splitter Resizing Ends**
+  // biome-ignore lint/correctness/useExhaustiveDependencies: resizeTrigger changes when the splitter is moved, which is the signal to resize
   useEffect(() => {
     resizeChart()
-  }, [resizeTrigger]);
-
-  function resizeChart(){
-    if (chart && !chart.isDisposed() && wrapperRef.current) {
-      const wrapperHeight = wrapperRef.current.getBoundingClientRect().height;
-      chart.resize({height: wrapperHeight});
-    }
-  }
+  }, [resizeTrigger, resizeChart]);
 
   return (
     <div className="time-chart-wrapper" ref={wrapperRef}>
@@ -136,14 +136,17 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
       <TooltipIcon 
         width="17" 
         height="17" 
-        className={"extra-toolbox-button-icon" + (pointerActive ? ' active': "")}
+        className={`extra-toolbox-button-icon${pointerActive ? ' active': ""}`}
         onClick={() => setPointerActive(prev => !prev)}
       />
       <ReactECharts
+        echarts={echarts}
         option={fixedOptions}
         onChartReady={setChart}
         // Size from the DOM on every resize (echarts-for-react 3.0.6 otherwise fixes the initial px size)
         opts={CHART_OPTS}
+        // Fill the wrapper instead of echarts-for-react's default 300px height
+        style={CHART_STYLE}
         className="time-chart-container" 
       />
     </div>

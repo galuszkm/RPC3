@@ -11,5 +11,7 @@ export default defineConfig({
       reporter: ['text', 'html'],
     },
     testTimeout: 10000,
+    // Unit tests only; Playwright UI tests in tests/e2e run with `npm run test:e2e`
+    include: ['tests/unit/**/*.test.ts'],
   },
 })

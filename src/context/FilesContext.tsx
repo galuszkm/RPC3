@@ -1,5 +1,6 @@
-import React, { createContext, useReducer, useContext, ReactNode } from "react";
-import { RPC } from "../rpc3";
+import type React from "react";
+import { createContext, useReducer, useContext, type ReactNode } from "react"
+import type { RPC } from "../rpc3";
 
 // Type definitions
 interface FilesState {
@@ -48,6 +49,7 @@ export const FilesProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 };
 
 // Custom hook for using context
+// biome-ignore lint/style/useComponentExportOnlyModules: the context hook lives next to its provider
 export const useFiles = (): FilesContextType => {
   const context = useContext(FilesContext);
   if (!context) {
