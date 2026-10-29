@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useChannels } from "../context/ChannelsContext";
-import ReactECharts from "echarts-for-react";
+import ReactECharts, { EChartsInstance } from "echarts-for-react";
+
 import { fixedOptions } from "./TimeChartOptions";
 import { Channel } from "../rpc3";
 import TooltipIcon from "../icons/TooltipIcon";
 import { Tooltip } from "primereact/tooltip";
 import "./TimeChart.css";
+
+const CHART_OPTS = { width: 'auto', height: 'auto' } as const;
 
 const generateData = (c: Channel) => {
   const len = c.value.length;
@@ -23,7 +26,8 @@ interface TimeChartProps {
 
 export default function TimeChart({ resizeTrigger }: TimeChartProps) {
   // Local states and refs
-  const chartRef = useRef<ReactECharts | null>(null);
+  // ECharts instance, set once echarts-for-react has finished its async init
+  const [chart, setChart] = useState<EChartsInstance | null>(null);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const [pointerActive, setPointerActive] = useState(false);
 
@@ -32,7 +36,8 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
 
   // Bind double click event handler to chart ref
   useEffect(() => {
-    let chartInstance: any;
+    if (!chart) return;
+    const chartInstance = chart;
     const handleDoubleClick = () => {
       // Reset dataZoom to full range (0% ~ 100%)
       chartInstance.dispatchAction({
@@ -42,30 +47,22 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
       });
     };
     // Bind double click handler to event
-    if (chartRef.current) {
-      chartInstance = chartRef.current.getEchartsInstance();
-      window.addEventListener('resize', resizeChart)
-      // Listen for 'dblclick' on the chart
-      if (chartInstance.getZr()){
-        chartInstance.getZr().on("dblclick", handleDoubleClick);
-      }
-    }
+    window.addEventListener('resize', resizeChart)
+    // Listen for 'dblclick' on the chart
+    chartInstance.getZr()?.on("dblclick", handleDoubleClick);
     // Cleanup listener on unmount
     return () => {
-      if (chartInstance){
-        window.removeEventListener('resize', resizeChart)
-        if (chartInstance.getZr()){
-          chartInstance.getZr().off("dblclick", handleDoubleClick);
-        }
+      window.removeEventListener('resize', resizeChart)
+      if (!chartInstance.isDisposed()) {
+        chartInstance.getZr()?.off("dblclick", handleDoubleClick);
       }
     };
-  }, []);
+  }, [chart]);
 
   // **Effect to Update Series & Y-Axis Name Dynamically**
   useEffect(() => {
-    if (chartRef.current) {
-      // Get chart instance
-      const chartInstance = chartRef.current.getEchartsInstance();
+    if (chart && !chart.isDisposed()) {
+      const chartInstance = chart;
 
       // Generate Series Data Dynamically
       const seriesData = channels.map(c => ({
@@ -99,15 +96,13 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
         }
       );
     }
-  }, [channels]); // Re-run when channels change
+  }, [chart, channels]); // Re-run when chart is ready or channels change
 
   // Active tooltip
   useEffect(() => {
-    if (chartRef.current) {
-      // Get chart instance
-      const chartInstance = chartRef.current.getEchartsInstance();
+    if (chart && !chart.isDisposed()) {
       // Update Chart
-      chartInstance.setOption(
+      chart.setOption(
         {
           tooltip: {
             ...fixedOptions.tooltip,
@@ -116,7 +111,7 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
         }
       )
     }
-  }, [pointerActive])
+  }, [chart, pointerActive])
 
   // **Resize Chart When Splitter Resizing Ends**
   useEffect(() => {
@@ -124,10 +119,9 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
   }, [resizeTrigger]);
 
   function resizeChart(){
-    if (chartRef.current && wrapperRef.current) {
-      const chartInstance = chartRef.current.getEchartsInstance();
+    if (chart && !chart.isDisposed() && wrapperRef.current) {
       const wrapperHeight = wrapperRef.current.getBoundingClientRect().height;
-      chartInstance.resize({height: wrapperHeight});
+      chart.resize({height: wrapperHeight});
     }
   }
 
@@ -146,8 +140,10 @@ export default function TimeChart({ resizeTrigger }: TimeChartProps) {
         onClick={() => setPointerActive(prev => !prev)}
       />
       <ReactECharts
-        ref={chartRef} 
-        option={fixedOptions} 
+        option={fixedOptions}
+        onChartReady={setChart}
+        // Size from the DOM on every resize (echarts-for-react 3.0.6 otherwise fixes the initial px size)
+        opts={CHART_OPTS}
         className="time-chart-container" 
       />
     </div>

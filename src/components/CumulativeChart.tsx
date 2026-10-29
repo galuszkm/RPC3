@@ -1,7 +1,10 @@
-import ReactECharts from "echarts-for-react";
-import { useEffect, useRef } from "react";
+import ReactECharts, { EChartsInstance } from "echarts-for-react";
+
+import { useEffect, useState } from "react";
 import { fixedOptions, tooltipFormatter } from "./CumulativeChartOptions";
 import "./CumulativeChart.css";
+
+const CHART_OPTS = { width: 'auto', height: 'auto' } as const;
 
 const generateData = (x: Float64Array | number[], y: Float64Array | number[]) => {
   const len = x.length;
@@ -29,11 +32,13 @@ export default function CumulativeChart({
   xLabel = "Cumulative [-]", yLabel = "Range", xTypeLog = false,
   eqSignals = [], eqSignalsName = [],
 }: CumulativeChartProps) {
-  const chartRef = useRef<ReactECharts | null>(null);
+  // ECharts instance, set once echarts-for-react has finished its async init
+  const [chart, setChart] = useState<EChartsInstance | null>(null);
 
   // Bind double click event handler to chart ref
   useEffect(() => {
-    let chartInstance: any;
+    if (!chart) return;
+    const chartInstance = chart;
     const handleDoubleClick = () => {
       // Reset dataZoom to full range (0% ~ 100%)
       chartInstance.dispatchAction({
@@ -43,26 +48,20 @@ export default function CumulativeChart({
       });
     };
     // Bind double click handler to event
-    if (chartRef.current) {
-      chartInstance = chartRef.current.getEchartsInstance();
-      // Listen for 'dblclick' on the chart
-      if (chartInstance.getZr()) {
-        chartInstance.getZr().on("dblclick", handleDoubleClick);
-      }
-    }
+    // Listen for 'dblclick' on the chart
+    chartInstance.getZr()?.on("dblclick", handleDoubleClick);
     // Cleanup listener on unmount
     return () => {
-      if (chartInstance && chartInstance.getZr()) {
-        chartInstance.getZr().off("dblclick", handleDoubleClick);
+      if (!chartInstance.isDisposed()) {
+        chartInstance.getZr()?.off("dblclick", handleDoubleClick);
       }
     };
-  }, []);
+  }, [chart]);
 
   // **Effect to Update Series & Y-Axis Name Dynamically**
   useEffect(() => {
-    if (chartRef.current) {
-      // Get chart instance
-      const chartInstance = chartRef.current.getEchartsInstance();
+    if (chart && !chart.isDisposed()) {
+      const chartInstance = chart;
 
       // Generate Series Data Dynamically
       const seriesData = []
@@ -123,12 +122,14 @@ export default function CumulativeChart({
         }
       );
     }
-  }, [x, y, xTypeLog, xLabel, yLabel, name]);
+  }, [chart, x, y, xTypeLog, xLabel, yLabel, name]);
 
   return (
     <ReactECharts
-      ref={chartRef}
       option={fixedOptions}
+      onChartReady={setChart}
+      // Size from the DOM on every resize (echarts-for-react 3.0.6 otherwise fixes the initial px size)
+      opts={CHART_OPTS}
       className="cumulative-chart-container"
     />
   )
