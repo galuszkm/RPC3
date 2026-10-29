@@ -1,3 +1,8 @@
+.p-column-filter-remove-button > span,
+.p-column-filter-add-button > span {
+    margin-left: 8px;
+}
+
 .channel-table {
     font-size: 14px;
     width: 100%;
@@ -68,10 +73,6 @@
     padding-bottom: 5px;
 }
 
-.p-column-filter-remove-button > span,
-.p-column-filter-add-button > span {
-    margin-left: 8px;
-}
 .p-column-filter-overlay * {
     font-size: 14px;
 }

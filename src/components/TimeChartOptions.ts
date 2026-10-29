@@ -1,3 +1,13 @@
+import type { ECOption } from "./charts/echartsCore";
+
+// The fields of ECharts' axis-tooltip params that the formatter uses
+interface AxisTooltipParam {
+  axisValue: number;
+  marker: string;
+  seriesName: string;
+  value: number[];
+}
+
 const formatTooltipRow = (marker: string, seriesName: string, value: number, unit: string) => {
   return `
     <div style="
@@ -13,7 +23,7 @@ const formatTooltipRow = (marker: string, seriesName: string, value: number, uni
   `;
 };
 
-const tooltipFormatter = (params: any) => {
+const tooltipFormatter = (params: AxisTooltipParam[]) => {
   let tooltipText = `
     <div 
       style="
@@ -25,7 +35,7 @@ const tooltipFormatter = (params: any) => {
     </div>
   `;
 
-  params.forEach((param: any) => {
+  params.forEach((param) => {
     // Extract unit from `seriesName` using regex
     const unitMatch = param.seriesName.match(/\[(.*?)\]$/);
     const unit = unitMatch ? unitMatch[1] : "";
@@ -38,15 +48,16 @@ const tooltipFormatter = (params: any) => {
 };
 
 export const fixedOptions = {
-    title: {},
     animation: false,
+    // Accessible text description of the chart (series names), also used by e2e tests
+    aria: { enabled: true },
     legend: {
       show: true,
       orient: "horizontal",
       left: 20,
       top: 0,
       itemGap: 20,
-      formatter: (name: string) => (name.length > 33 ? name.substring(0, 30) + "..." : name),
+      formatter: (name: string) => (name.length > 33 ? `${name.substring(0, 30)}...` : name),
     },
     toolbox: {
       right: 20,
@@ -64,7 +75,8 @@ export const fixedOptions = {
       show: false,
       trigger: "axis",
       axisPointer: { type: "line" },
-      formatter: tooltipFormatter,
+      // trigger 'axis' always passes an array of series params
+      formatter: (params) => tooltipFormatter(params as unknown as AxisTooltipParam[]),
     },
     grid: {
       left: 60, right: 30, top: 50, bottom: 80, containLabel: true
@@ -111,5 +123,5 @@ export const fixedOptions = {
       },
     },
     series: [] // Placeholder for dynamic series update
-  };
+  } satisfies ECOption;
   

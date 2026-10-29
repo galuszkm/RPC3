@@ -54,6 +54,7 @@
     margin: 0;
 }
 .signal-calc-grid > .utils .cbutton.paste-repets {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     padding: 8px 14px 8px 14px !important;
     width: 20rem;
     margin-left: auto;
@@ -105,6 +106,14 @@
     width: 6.5rem;
     min-width: 6.5rem;
 }
+.signal-calc-dialog table.utils-table input {
+    width: 100%;
+    padding: 4px;
+    border: 1px solid var(--surface-d);
+    border-radius: 4px;
+    outline: none;
+    font-family: "Inter var", sans-serif;
+}
 .signal-calc-grid > .utils .input-block > input {
     padding: 6px;
     padding-left: 10px;
@@ -147,7 +156,9 @@
     border-color: rgb(116, 166, 241);
 }
 .signal-calc-grid > .utils .switch-button .p-button:focus {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     outline: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     box-shadow: none !important;
 }
 .signal-calc-grid > .utils .switch-button-root > .title {
@@ -207,14 +218,6 @@
     background-color: var(--surface-c);
 }
 
-.signal-calc-dialog table.utils-table input {
-    width: 100%;
-    padding: 4px;
-    border: 1px solid var(--surface-d);
-    border-radius: 4px;
-    outline: none;
-    font-family: "Inter var", sans-serif;
-}
 
 .signal-calc-dialog table.utils-table input:focus {
     border-color: var(--primary-color);
@@ -257,6 +260,9 @@
     max-width: 85%;
     border: 1px solid rgb(222, 222, 222);
 }
+.signal-calc-dialog table.eq-signal-table td {
+    text-align: center;  
+}
 .signal-calc-dialog table.eq-signal-table tr:last-child > td {
     border-bottom: 1px solid rgb(222, 222, 222);
 }
@@ -269,9 +275,6 @@
 }
 .signal-calc-dialog table.eq-signal-table th.percDmg {
     width: 12rem;
-}
-.signal-calc-dialog table.eq-signal-table td {
-    text-align: center;  
 }
 
 .signal-calc-dialog table.eq-signal-table th:not(:first-child),

@@ -3,7 +3,10 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import './index.css';
 
-createRoot(document.getElementById('rpc-viewer')!).render(
+const root = document.getElementById('rpc-viewer');
+if (!root) throw new Error('Missing #rpc-viewer element in index.html');
+
+createRoot(root).render(
   <StrictMode>
     <App />
   </StrictMode>,

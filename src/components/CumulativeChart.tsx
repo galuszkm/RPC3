@@ -1,10 +1,13 @@
-import ReactECharts, { EChartsInstance } from "echarts-for-react";
+import { echarts, ReactECharts, type EChartsInstance } from "./charts/echartsCore";
 
 import { useEffect, useState } from "react";
-import { fixedOptions, tooltipFormatter } from "./CumulativeChartOptions";
-import "./CumulativeChart.css";
+import { type AxisTooltipParam, fixedOptions, tooltipFormatter } from "./CumulativeChartOptions";
 
 const CHART_OPTS = { width: 'auto', height: 'auto' } as const;
+const CHART_STYLE = { height: '100%' };
+// Stable defaults so the chart-update effect doesn't re-run on every render
+const NO_EQ_SIGNALS: [number[], number[]][] = [];
+const NO_EQ_SIGNAL_NAMES: string[] = [];
 
 const generateData = (x: Float64Array | number[], y: Float64Array | number[]) => {
   const len = x.length;
@@ -30,7 +33,7 @@ interface CumulativeChartProps {
 export default function CumulativeChart({
   x, y, name, 
   xLabel = "Cumulative [-]", yLabel = "Range", xTypeLog = false,
-  eqSignals = [], eqSignalsName = [],
+  eqSignals = NO_EQ_SIGNALS, eqSignalsName = NO_EQ_SIGNAL_NAMES,
 }: CumulativeChartProps) {
   // ECharts instance, set once echarts-for-react has finished its async init
   const [chart, setChart] = useState<EChartsInstance | null>(null);
@@ -113,7 +116,7 @@ export default function CumulativeChart({
           },
           tooltip: {
             ...fixedOptions.tooltip,
-            formatter: (params: Object) => tooltipFormatter(params, xLabel),
+            formatter: (params: AxisTooltipParam[]) => tooltipFormatter(params, xLabel),
           }
         },
         {
@@ -122,14 +125,17 @@ export default function CumulativeChart({
         }
       );
     }
-  }, [chart, x, y, xTypeLog, xLabel, yLabel, name]);
+  }, [chart, x, y, xTypeLog, xLabel, yLabel, name, eqSignals, eqSignalsName]);
 
   return (
     <ReactECharts
+      echarts={echarts}
       option={fixedOptions}
       onChartReady={setChart}
       // Size from the DOM on every resize (echarts-for-react 3.0.6 otherwise fixes the initial px size)
       opts={CHART_OPTS}
+      // Fill the container instead of echarts-for-react's default 300px height
+      style={CHART_STYLE}
       className="cumulative-chart-container"
     />
   )

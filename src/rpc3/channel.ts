@@ -27,6 +27,7 @@ export class Channel {
   };
 
   constructor(
+    // biome-ignore lint/suspicious/noShadowRestrictedNames: public API field name, used across the app
     public Number: number,
     public Name: string,
     public Units: string,

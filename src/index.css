@@ -21,6 +21,8 @@ table {
     background-color: rgb(73, 135, 228);
 }
 .cbutton:focus {
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     outline: none !important;
+    /* biome-ignore lint/complexity/noImportantStyles: overrides the PrimeReact theme */
     box-shadow: none !important;
 }

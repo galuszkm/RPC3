@@ -63,7 +63,7 @@ export default function Dropzone() {
     e.preventDefault(); // Prevent default browser behavior (e.g., opening the file)
     setIsDragging(false);
     setIsLoading(true);
-    let droppedFiles: File[] = Array.from(e.dataTransfer?.files || []);
+    const droppedFiles: File[] = Array.from(e.dataTransfer?.files || []);
 
     // Read all dragged files
     await Promise.all(droppedFiles.map(async (file) => handleFileReading(file)));
@@ -77,7 +77,7 @@ export default function Dropzone() {
       const rpc = await file2rpc(file);
       addFile(rpc); // Dispatch ADD_FILE to context
       return rpc
-    } catch (error) {
+    } catch {
       toast.current?.show({
         severity: 'error', 
         summary: 'Error', 
@@ -151,14 +151,15 @@ export default function Dropzone() {
   }
 
   const renderDropbox = () => (
-    <div 
+    <section
+        aria-label="Signal file drop area"
         className={`lex align-items-center flex-column dropzone-box ${isDragging ? "dragover" : ""}`}
         onDrop={handleFileDrop}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
      >
       {renderDropboxContent()}
-     </div>
+     </section>
   )
 
   return (

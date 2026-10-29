@@ -1,7 +1,7 @@
 import 'primereact/resources/primereact.css';
 import 'primereact/resources/themes/lara-light-indigo/theme.css';
 import 'primeicons/primeicons.css';
-import { useState, lazy, Suspense, useRef } from 'react';
+import { useState, lazy, Suspense, useRef, type RefObject } from 'react';
 import { FilesProvider } from "./context/FilesContext";
 import { ChannelsProvider, useChannels } from './context/ChannelsContext';
 import { EventsProvider } from './context/EventContext';
@@ -15,7 +15,7 @@ const TimeChart = lazy(() => import("./components/TimeChart"));
 const SignalCalc = lazy(() => import("./components/SignalCalc"));
 const ChannelTable = lazy(() => import("./components/ChannelTable"));
 
-const renderSplitter = () => {
+function MainSplitter() {
   const [resizeTrigger, setResizeTrigger] = useState(0);
   return (
     <Splitter
@@ -26,12 +26,12 @@ const renderSplitter = () => {
       onResizeEnd={() => setResizeTrigger((prev) => prev + 1)} // Update state when resizing stops
     >
       <SplitterPanel size={45} minSize={2} style={{ overflow: "hidden", height: "44vh" }}>
-        <Suspense fallback={<></>}>
+        <Suspense fallback={null}>
           <TimeChart resizeTrigger={resizeTrigger} />
         </Suspense>
       </SplitterPanel>
       <SplitterPanel size={55} minSize={10} style={{ overflow: "auto", paddingTop: "0.5rem" }}>
-        <Suspense fallback={<></>}>
+        <Suspense fallback={null}>
           <ChannelTable />
         </Suspense>
       </SplitterPanel>
@@ -39,7 +39,7 @@ const renderSplitter = () => {
   )
 }
 
-function renderRightColumn(toast: React.RefObject<Toast | null>) {
+function RightColumn({ toast }: { toast: RefObject<Toast | null> }) {
   // Local states
   const [signalCalcOpen, setSignalCalcOpen] = useState(false);
   // Get selected channels from context
@@ -71,7 +71,7 @@ function renderRightColumn(toast: React.RefObject<Toast | null>) {
           onClick={handleOpenSignalCalc}
         />
       </div>
-      <Suspense fallback={<></>}>
+      <Suspense fallback={null}>
         <SignalCalc open={signalCalcOpen} setOpen={setSignalCalcOpen}/>
       </Suspense>
     </div>
@@ -85,8 +85,8 @@ function App() {
   return (
     <div className='App-grid'>
       <Toast ref={toast} />
-      {renderSplitter()}
-      {renderRightColumn(toast)}
+      <MainSplitter />
+      <RightColumn toast={toast} />
     </div>
   )
 }
